@@ -185,7 +185,7 @@ export default function App() {
   const [networkSpeed, setNetworkSpeed] = useState({ download: 150, upload: 25 })
   const [networkUsage, setNetworkUsage] = useState({ sent: 2.4, received: 15.8 })
 
-  const [language, setLanguage] = useState("English")
+  const [language, setLanguage] = useState("中文 (Chinese)")
   const [fontSize, setFontSize] = useState([14])
   const [theme, setTheme] = useState("Light")
   const [autoStart, setAutoStart] = useState(true)

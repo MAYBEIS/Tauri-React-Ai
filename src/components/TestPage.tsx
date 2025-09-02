@@ -31,44 +31,94 @@ const TestPage = () => {
     
     try {
       // 测试greet命令
-      const greet = await SystemMonitorAPI.greet('Test User');
-      setGreetResult(greet);
+      try {
+        const greet = await SystemMonitorAPI.greet('Test User');
+        setGreetResult(greet);
+      } catch (err) {
+        setGreetResult('');
+        console.error('Greet command failed:', err);
+      }
 
       // 测试系统信息命令
-      const sysInfo = await SystemMonitorAPI.getSystemInfo();
-      setSystemInfo(sysInfo);
+      try {
+        const sysInfo = await SystemMonitorAPI.getSystemInfo();
+        setSystemInfo(sysInfo);
+      } catch (err) {
+        setSystemInfo(null);
+        console.error('System info command failed:', err);
+      }
 
       // 测试CPU信息命令
-      const cpu = await SystemMonitorAPI.getCpuInfo();
-      setCpuInfo(cpu);
+      try {
+        const cpu = await SystemMonitorAPI.getCpuInfo();
+        setCpuInfo(cpu);
+      } catch (err) {
+        setCpuInfo(null);
+        console.error('CPU info command failed:', err);
+      }
 
       // 测试内存信息命令
-      const memInfo = await SystemMonitorAPI.getMemoryInfo();
-      setMemoryInfo(memInfo);
+      try {
+        const memInfo = await SystemMonitorAPI.getMemoryInfo();
+        setMemoryInfo(memInfo);
+      } catch (err) {
+        setMemoryInfo(null);
+        console.error('Memory info command failed:', err);
+      }
 
       // 测试磁盘信息命令
-      const disk = await SystemMonitorAPI.getDiskInfo();
-      setDiskInfo(disk);
+      try {
+        const disk = await SystemMonitorAPI.getDiskInfo();
+        setDiskInfo(disk);
+      } catch (err) {
+        setDiskInfo([]);
+        console.error('Disk info command failed:', err);
+      }
 
       // 测试网络状态命令
-      const netStatus = await SystemMonitorAPI.getNetworkStatus();
-      setNetworkStatus(netStatus);
+      try {
+        const netStatus = await SystemMonitorAPI.getNetworkStatus();
+        setNetworkStatus(netStatus);
+      } catch (err) {
+        setNetworkStatus(null);
+        console.error('Network status command failed:', err);
+      }
 
       // 测试音频设备命令
-      const audio = await SystemMonitorAPI.getAudioDevices();
-      setAudioDevices(audio);
+      try {
+        const audio = await SystemMonitorAPI.getAudioDevices();
+        setAudioDevices(audio);
+      } catch (err) {
+        setAudioDevices([]);
+        console.error('Audio devices command failed:', err);
+      }
 
       // 测试系统运行时间命令
-      const up = await SystemMonitorAPI.getUptime();
-      setUptime(up);
+      try {
+        const up = await SystemMonitorAPI.getUptime();
+        setUptime(up);
+      } catch (err) {
+        setUptime(0);
+        console.error('Uptime command failed:', err);
+      }
 
       // 测试进程列表命令
-      const procs = await SystemMonitorAPI.getProcesses();
-      setProcesses(procs);
+      try {
+        const procs = await SystemMonitorAPI.getProcesses();
+        setProcesses(procs);
+      } catch (err) {
+        setProcesses([]);
+        console.error('Processes command failed:', err);
+      }
 
       // 测试ping命令
-      const ping = await SystemMonitorAPI.pingHost('google.com');
-      setPingResult(ping);
+      try {
+        const ping = await SystemMonitorAPI.pingHost('google.com');
+        setPingResult(ping);
+      } catch (err) {
+        setPingResult('');
+        console.error('Ping command failed:', err);
+      }
     } catch (err) {
       console.error('Test failed:', err);
       setError(`Test failed: ${err}`);
@@ -130,7 +180,7 @@ const TestPage = () => {
               <CardTitle>Greet 命令</CardTitle>
             </CardHeader>
             <CardContent>
-              <p>{greetResult || '等待测试...'}</p>
+              <p>{greetResult !== '' ? greetResult : 'N/A'}</p>
             </CardContent>
           </Card>
 
@@ -140,7 +190,7 @@ const TestPage = () => {
               <CardTitle>Ping 命令</CardTitle>
             </CardHeader>
             <CardContent>
-              <p className="whitespace-pre-wrap">{pingResult || '等待测试...'}</p>
+              <p className="whitespace-pre-wrap">{pingResult !== '' ? pingResult : 'N/A'}</p>
             </CardContent>
           </Card>
 
@@ -157,7 +207,7 @@ const TestPage = () => {
                   <p><strong>内核版本:</strong> {systemInfo.kernel_version}</p>
                 </div>
               ) : (
-                <p>等待测试...</p>
+                <p>N/A</p>
               )}
             </CardContent>
           </Card>
@@ -177,7 +227,7 @@ const TestPage = () => {
                   {cpuInfo.temperature && <p><strong>温度:</strong> {cpuInfo.temperature}°C</p>}
                 </div>
               ) : (
-                <p>等待测试...</p>
+                <p>N/A</p>
               )}
             </CardContent>
           </Card>
@@ -196,7 +246,7 @@ const TestPage = () => {
                   <p><strong>空闲:</strong> {formatBytes(memoryInfo.free)}</p>
                 </div>
               ) : (
-                <p>等待测试...</p>
+                <p>N/A</p>
               )}
             </CardContent>
           </Card>
@@ -210,7 +260,7 @@ const TestPage = () => {
               {uptime > 0 ? (
                 <p>{formatUptime(uptime)}</p>
               ) : (
-                <p>等待测试...</p>
+                <p>N/A</p>
               )}
             </CardContent>
           </Card>
@@ -239,7 +289,7 @@ const TestPage = () => {
                 ))}
               </div>
             ) : (
-              <p>等待测试...</p>
+              <p>N/A</p>
             )}
           </CardContent>
         </Card>
@@ -269,7 +319,7 @@ const TestPage = () => {
                 </div>
               </div>
             ) : (
-              <p>等待测试...</p>
+              <p>N/A</p>
             )}
           </CardContent>
         </Card>
@@ -296,7 +346,7 @@ const TestPage = () => {
                 ))}
               </div>
             ) : (
-              <p>等待测试...</p>
+              <p>N/A</p>
             )}
           </CardContent>
         </Card>
@@ -331,7 +381,7 @@ const TestPage = () => {
                 </table>
               </div>
             ) : (
-              <p>等待测试...</p>
+              <p>N/A</p>
             )}
           </CardContent>
         </Card>

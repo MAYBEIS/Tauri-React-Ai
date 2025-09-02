@@ -1,6 +1,13 @@
 # Tauri + React + TypeScript + AI (开发中,暂未实现)
 
 一个基于 Tauri 和 React 构建的现代化系统监控应用程序，集成了 AI 功能和多语言支持。
+✅ **现代化技术栈** - Tauri 2.x + React 19 + TypeScript + Vite
+✅ **完整组件库** - shadcn/ui + Radix UI 提供丰富的UI组件
+✅ **国际化支持** - 完善的i18next多语言框架（中英文）
+✅ **性能优化** - 使用useCallback和memo进行组件优化
+✅ **模块化设计** - 清晰的代码结构和API封装
+✅ **响应式UI** - Tailwind CSS + 现代化设计
+
 ![](img/Snipaste_2025-09-02_18-20-53.png)
 
 ## 功能特性
@@ -66,20 +73,29 @@ yarn tauri dev
 ## 项目结构
 
 ```
-src/
-├── components/          # React 组件
-│   └── ui/             # shadcn/ui 组件
-├── lib/                # 工具函数和配置
-├── locales/            # 国际化文件
-│   ├── en/            # 英文翻译
-│   └── zh/            # 中文翻译
-├── App.tsx            # 主应用组件
-└── main.tsx           # 应用入口点
-
-src-tauri/             # Tauri 后端代码
-├── src/              # Rust 源代码
-├── tauri.conf.json   # Tauri 配置
-└── icons/            # 应用图标
+Tauri-React-Ai/
+├── src/                    # 前端源代码
+│   ├── components/        # React组件
+│   │   └── ui/           # shadcn/ui组件库（完整组件集）
+│   ├── lib/              # 工具函数和配置
+│   │   ├── api.ts        # Tauri IPC API封装
+│   │   ├── i18n.ts       # 国际化配置
+│   │   └── utils.ts      # 工具函数
+│   ├── locales/          # 多语言文件
+│   │   ├── en/          # 英文翻译
+│   │   └── zh/          # 中文翻译
+│   ├── App.tsx          # 主应用组件
+│   └── main.tsx         # 应用入口
+├── src-tauri/            # Rust后端代码
+│   ├── src/
+│   │   └── lib.rs       # Rust业务逻辑
+│   ├── Cargo.toml       # Rust依赖配置
+│   └── tauri.conf.json  # Tauri应用配置
+└── 配置文件
+    ├── package.json      # Node.js依赖
+    ├── vite.config.ts   # Vite配置
+    ├── tailwind.config.js # Tailwind配置
+    └── tsconfig.json    # TypeScript配置
 ```
 
 ## 主要功能模块
@@ -140,5 +156,4 @@ src-tauri/             # Tauri 后端代码
 Maybe - 1913093102@qq.com
 
 项目链接: [https://github.com/yourusername/Tauri-React-Ai](https://github.com/yourusername/Tauri-React-Ai)
-
 
