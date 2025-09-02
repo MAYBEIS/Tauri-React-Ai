@@ -29,6 +29,7 @@ import { useState, useEffect, ChangeEvent } from "react"
 import reactLogo from "./assets/react.svg"
 import { invoke } from "@tauri-apps/api/core"
 import "./App.css"
+import { useTranslation } from 'react-i18next'
 
 // Simple line chart component
 function MiniChart({ data }: { data: number[] }) {
@@ -145,6 +146,7 @@ function HotkeyCapture({ onCapture, currentHotkey }: { onCapture: (hotkey: strin
 }
 
 export default function App() {
+  const { t, i18n } = useTranslation();
   const [currentPage, setCurrentPage] = useState("performance")
   const [pingTarget, setPingTarget] = useState("google.com")
   const [pingResult, setPingResult] = useState<string | null>(null)
@@ -228,12 +230,12 @@ export default function App() {
   const diskData = [10, 15, 12, 18, 14, 16, 12, 15, 20, 25, 15]
 
   const navigationItems = [
-    { id: "performance", label: "Performance", icon: BarChart3 },
-    { id: "network", label: "Network", icon: Wifi },
-    { id: "audio", label: "Audio", icon: Volume2 },
-    { id: "hotkeys", label: "Hotkeys", icon: Keyboard },
-    { id: "disk", label: "Disk", icon: Server },
-    { id: "settings", label: "Settings", icon: Settings },
+    { id: "performance", label: t('navigation.performance'), icon: BarChart3 },
+    { id: "network", label: t('navigation.network'), icon: Wifi },
+    { id: "audio", label: t('navigation.audio'), icon: Volume2 },
+    { id: "hotkeys", label: t('navigation.hotkeys'), icon: Keyboard },
+    { id: "disk", label: t('navigation.disk'), icon: Server },
+    { id: "settings", label: t('navigation.settings'), icon: Settings },
   ]
 
   const handlePing = async () => {
@@ -299,10 +301,10 @@ export default function App() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 text-gray-900">
-      <div className="flex">
+    <div className="h-screen bg-gray-50 text-gray-900 overflow-hidden">
+      <div className="flex h-full">
         {/* Sidebar */}
-        <div className="w-64 bg-white min-h-screen p-4 border-r border-gray-200 shadow-sm">
+        <div className="w-64 bg-white h-full p-4 border-r border-gray-200 shadow-sm flex-shrink-0">
           {/* Logo/Brand */}
           <div className="flex items-center gap-3 mb-8">
             <div className="w-8 h-8 bg-blue-500 rounded-lg flex items-center justify-center shadow-md">
@@ -335,19 +337,19 @@ export default function App() {
         </div>
 
         {/* Main Content */}
-        <div className="flex-1 p-6 bg-gray-50">
+        <div className="flex-1 p-6 bg-gray-50 overflow-y-auto">
           {currentPage === "performance" && (
             <>
-              <h1 className="text-3xl font-bold mb-6 text-gray-800">Performance Monitor</h1>
+              <h1 className="text-3xl font-bold mb-6 text-gray-800">{t('performance.title')}</h1>
 
               <div className="mb-6">
-                <h2 className="text-xl font-semibold mb-4 text-gray-700">Real-time Performance</h2>
+                <h2 className="text-xl font-semibold mb-4 text-gray-700">{t('performance.realTimePerformance')}</h2>
                 <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
                   {/* CPU Card */}
                   <Card className="bg-white border-gray-200 shadow-sm hover:shadow-md transition-shadow">
                     <CardHeader className="pb-2 px-4 pt-4">
                       <div className="flex items-center justify-between">
-                        <CardTitle className="text-xs font-medium text-gray-600">CPU</CardTitle>
+                        <CardTitle className="text-xs font-medium text-gray-600">{t('performance.cpu')}</CardTitle>
                         <div className="flex items-center gap-1 text-green-600 text-xs font-medium">
                           <span>↗</span>
                           <span>+5%</span>
@@ -366,7 +368,7 @@ export default function App() {
                   <Card className="bg-white border-gray-200 shadow-sm hover:shadow-md transition-shadow">
                     <CardHeader className="pb-2 px-4 pt-4">
                       <div className="flex items-center justify-between">
-                        <CardTitle className="text-xs font-medium text-gray-600">GPU</CardTitle>
+                        <CardTitle className="text-xs font-medium text-gray-600">{t('performance.gpu')}</CardTitle>
                         <div className="flex items-center gap-1 text-green-600 text-xs font-medium">
                           <span>↗</span>
                           <span>+10%</span>
@@ -385,7 +387,7 @@ export default function App() {
                   <Card className="bg-white border-gray-200 shadow-sm hover:shadow-md transition-shadow">
                     <CardHeader className="pb-2 px-4 pt-4">
                       <div className="flex items-center justify-between">
-                        <CardTitle className="text-xs font-medium text-gray-600">RAM</CardTitle>
+                        <CardTitle className="text-xs font-medium text-gray-600">{t('performance.ram')}</CardTitle>
                         <div className="flex items-center gap-1 text-red-500 text-xs font-medium">
                           <span>↘</span>
                           <span>-5%</span>
@@ -404,7 +406,7 @@ export default function App() {
                   <Card className="bg-white border-gray-200 shadow-sm hover:shadow-md transition-shadow">
                     <CardHeader className="pb-2 px-4 pt-4">
                       <div className="flex items-center justify-between">
-                        <CardTitle className="text-xs font-medium text-gray-600">Disk I/O</CardTitle>
+                        <CardTitle className="text-xs font-medium text-gray-600">{t('performance.diskIO')}</CardTitle>
                         <div className="flex items-center gap-1 text-green-600 text-xs font-medium">
                           <span>↗</span>
                           <span>+2%</span>
@@ -422,7 +424,7 @@ export default function App() {
                   <Card className="bg-white border-gray-200 shadow-sm hover:shadow-md transition-shadow">
                     <CardHeader className="pb-2 px-4 pt-4">
                       <div className="flex items-center justify-between">
-                        <CardTitle className="text-xs font-medium text-gray-600">Download</CardTitle>
+                        <CardTitle className="text-xs font-medium text-gray-600">{t('performance.download')}</CardTitle>
                         <div className="flex items-center gap-1 text-blue-600 text-xs font-medium">
                           <span>↓</span>
                         </div>
@@ -437,7 +439,7 @@ export default function App() {
                   <Card className="bg-white border-gray-200 shadow-sm hover:shadow-md transition-shadow">
                     <CardHeader className="pb-2 px-4 pt-4">
                       <div className="flex items-center justify-between">
-                        <CardTitle className="text-xs font-medium text-gray-600">Upload</CardTitle>
+                        <CardTitle className="text-xs font-medium text-gray-600">{t('performance.upload')}</CardTitle>
                         <div className="flex items-center gap-1 text-blue-600 text-xs font-medium">
                           <span>↑</span>
                         </div>
@@ -452,7 +454,7 @@ export default function App() {
               </div>
 
               <div className="mb-6">
-                <h2 className="text-xl font-semibold mb-4 text-gray-700">System Information</h2>
+                <h2 className="text-xl font-semibold mb-4 text-gray-700">{t('performance.systemInformation')}</h2>
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
                   {/* Hardware Info Card */}
                   <Card className="bg-white border-gray-200 shadow-sm">
@@ -526,46 +528,46 @@ export default function App() {
               </div>
 
               <div>
-                <h2 className="text-xl font-semibold mb-4 text-gray-700">Temperature & Power</h2>
+                <h2 className="text-xl font-semibold mb-4 text-gray-700">{t('performance.temperaturePower')}</h2>
                 <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
                   <Card className="bg-white border-gray-200 shadow-sm">
                     <CardContent className="p-4">
-                      <div className="text-xs text-gray-500 mb-1">CPU Temp</div>
+                      <div className="text-xs text-gray-500 mb-1">{t('performance.cpuTemp')}</div>
                       <div className="text-lg font-bold text-green-600">52°C</div>
                       <div className="text-xs text-gray-600">Normal</div>
                     </CardContent>
                   </Card>
                   <Card className="bg-white border-gray-200 shadow-sm">
                     <CardContent className="p-4">
-                      <div className="text-xs text-gray-500 mb-1">GPU Temp</div>
+                      <div className="text-xs text-gray-500 mb-1">{t('performance.gpuTemp')}</div>
                       <div className="text-lg font-bold text-yellow-600">68°C</div>
                       <div className="text-xs text-gray-600">Warm</div>
                     </CardContent>
                   </Card>
                   <Card className="bg-white border-gray-200 shadow-sm">
                     <CardContent className="p-4">
-                      <div className="text-xs text-gray-500 mb-1">System Fan</div>
+                      <div className="text-xs text-gray-500 mb-1">{t('performance.systemFan')}</div>
                       <div className="text-lg font-bold text-blue-600">1200RPM</div>
                       <div className="text-xs text-gray-600">Auto</div>
                     </CardContent>
                   </Card>
                   <Card className="bg-white border-gray-200 shadow-sm">
                     <CardContent className="p-4">
-                      <div className="text-xs text-gray-500 mb-1">Power Draw</div>
+                      <div className="text-xs text-gray-500 mb-1">{t('performance.powerDraw')}</div>
                       <div className="text-lg font-bold text-orange-600">285W</div>
                       <div className="text-xs text-gray-600">Moderate</div>
                     </CardContent>
                   </Card>
                   <Card className="bg-white border-gray-200 shadow-sm">
                     <CardContent className="p-4">
-                      <div className="text-xs text-gray-500 mb-1">Battery</div>
+                      <div className="text-xs text-gray-500 mb-1">{t('performance.battery')}</div>
                       <div className="text-lg font-bold text-green-600">N/A</div>
                       <div className="text-xs text-gray-600">Desktop</div>
                     </CardContent>
                   </Card>
                   <Card className="bg-white border-gray-200 shadow-sm">
                     <CardContent className="p-4">
-                      <div className="text-xs text-gray-500 mb-1">Uptime</div>
+                      <div className="text-xs text-gray-500 mb-1">{t('performance.uptime')}</div>
                       <div className="text-lg font-bold text-gray-800">2d 14h</div>
                       <div className="text-xs text-gray-600">Stable</div>
                     </CardContent>
@@ -578,18 +580,18 @@ export default function App() {
           {/* Network Page */}
           {currentPage === "network" && (
             <>
-              <h1 className="text-4xl font-bold mb-8 text-gray-800">Network Monitor</h1>
+              <h1 className="text-4xl font-bold mb-8 text-gray-800">{t('network.title')}</h1>
 
               {/* Network Status Section */}
               <div className="mb-8">
-                <h2 className="text-2xl font-semibold mb-6 text-gray-700">Connection Status</h2>
+                <h2 className="text-2xl font-semibold mb-6 text-gray-700">{t('network.connectionStatus')}</h2>
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
                   {/* Connection Status */}
                   <Card className="bg-white border-gray-200 shadow-md">
                     <CardHeader className="pb-2">
                       <CardTitle className="text-sm font-medium text-gray-600 flex items-center gap-2">
                         <Wifi className="w-4 h-4" />
-                        Connection
+                        {t('network.connection')}
                       </CardTitle>
                     </CardHeader>
                     <CardContent>
@@ -603,7 +605,7 @@ export default function App() {
                     <CardHeader className="pb-2">
                       <CardTitle className="text-sm font-medium text-gray-600 flex items-center gap-2">
                         <Server className="w-4 h-4" />
-                        Local IP
+                        {t('network.localIP')}
                       </CardTitle>
                     </CardHeader>
                     <CardContent>
@@ -617,7 +619,7 @@ export default function App() {
                     <CardHeader className="pb-2">
                       <CardTitle className="text-sm font-medium text-gray-600 flex items-center gap-2">
                         <Globe className="w-4 h-4" />
-                        Public IP
+                        {t('network.publicIP')}
                       </CardTitle>
                     </CardHeader>
                     <CardContent>
@@ -631,7 +633,7 @@ export default function App() {
                     <CardHeader className="pb-2">
                       <CardTitle className="text-sm font-medium text-gray-600 flex items-center gap-2">
                         <Zap className="w-4 h-4" />
-                        Speed
+                        {t('network.speed')}
                       </CardTitle>
                     </CardHeader>
                     <CardContent>
@@ -644,13 +646,13 @@ export default function App() {
 
               {/* Ping Tool Section */}
               <div className="mb-8">
-                <h2 className="text-2xl font-semibold mb-6 text-gray-700">Network Ping Tool</h2>
+                <h2 className="text-2xl font-semibold mb-6 text-gray-700">{t('network.networkPingTool')}</h2>
                 <Card className="bg-white border-gray-200 shadow-md">
                   <CardContent className="p-6">
                     <div className="flex gap-4 items-end mb-4">
                       <div className="flex-1">
                         <Label htmlFor="ping-target" className="text-sm font-medium text-gray-700">
-                          Target Host
+                          {t('network.targetHost')}
                         </Label>
                         <Input
                           id="ping-target"
@@ -671,7 +673,7 @@ export default function App() {
 
               {/* Proxy Settings Section */}
               <div className="mb-8">
-                <h2 className="text-2xl font-semibold mb-6 text-gray-700">Proxy Configuration</h2>
+                <h2 className="text-2xl font-semibold mb-6 text-gray-700">{t('network.proxyConfiguration')}</h2>
                 <Card className="bg-white border-gray-200 shadow-md">
                   <CardContent className="p-6">
                     <div className="space-y-4">
@@ -684,7 +686,7 @@ export default function App() {
                           className="w-4 h-4 text-blue-600"
                         />
                         <Label htmlFor="proxy-enabled" className="text-sm font-medium text-gray-700">
-                          Enable HTTP Proxy
+                          {t('network.enableHTTPProxy')}
                         </Label>
                       </div>
 
@@ -692,7 +694,7 @@ export default function App() {
                         <div className="grid grid-cols-2 gap-4 mt-4">
                           <div>
                             <Label htmlFor="proxy-host" className="text-sm font-medium text-gray-700">
-                              Proxy Host
+                              {t('network.proxyHost')}
                             </Label>
                             <Input
                               id="proxy-host"
@@ -704,7 +706,7 @@ export default function App() {
                           </div>
                           <div>
                             <Label htmlFor="proxy-port" className="text-sm font-medium text-gray-700">
-                              Port
+                              {t('network.port')}
                             </Label>
                             <Input
                               id="proxy-port"
@@ -717,7 +719,7 @@ export default function App() {
                         </div>
                       )}
 
-                      <Button className="bg-green-500 hover:bg-green-600">Apply Proxy Settings</Button>
+                      <Button className="bg-green-500 hover:bg-green-600">{t('network.applyProxySettings')}</Button>
                     </div>
                   </CardContent>
                 </Card>
@@ -725,11 +727,11 @@ export default function App() {
 
               {/* DNS Settings Section */}
               <div>
-                <h2 className="text-2xl font-semibold mb-6 text-gray-700">DNS Configuration</h2>
+                <h2 className="text-2xl font-semibold mb-6 text-gray-700">{t('network.dnsConfiguration')}</h2>
                 <Card className="bg-white border-gray-200 shadow-md">
                   <CardContent className="p-6">
                     <div className="space-y-4">
-                      <Label className="text-sm font-medium text-gray-700">DNS Servers</Label>
+                      <Label className="text-sm font-medium text-gray-700">{t('network.dnsServers')}</Label>
                       {dnsServers.map((server, index) => (
                         <div key={index} className="flex gap-2 items-center">
                           <Input
@@ -745,7 +747,7 @@ export default function App() {
                               onClick={() => removeDnsServer(index)}
                               className="text-red-500 hover:text-red-700"
                             >
-                              Remove
+                              {t('hotkeys.remove')}
                             </Button>
                           )}
                         </div>
@@ -753,27 +755,27 @@ export default function App() {
 
                       <div className="flex gap-2">
                         <Button variant="outline" onClick={addDnsServer}>
-                          Add DNS Server
+                          {t('network.addDNSServer')}
                         </Button>
-                        <Button className="bg-blue-500 hover:bg-blue-600">Apply DNS Settings</Button>
+                        <Button className="bg-blue-500 hover:bg-blue-600">{t('network.applyDNSSettings')}</Button>
                       </div>
 
                       <div className="mt-4 p-3 bg-blue-50 rounded-lg">
                         <div className="text-sm text-blue-800">
-                          <strong>Quick DNS Presets:</strong>
+                          <strong>{t('network.quickDNSPresets')}:</strong>
                           <div className="mt-2 space-x-2">
                             <Button variant="outline" size="sm" onClick={() => setDnsServers(["8.8.8.8", "8.8.4.4"])}>
-                              Google DNS
+                              {t('network.googleDNS')}
                             </Button>
                             <Button variant="outline" size="sm" onClick={() => setDnsServers(["1.1.1.1", "1.0.0.1"])}>
-                              Cloudflare DNS
+                              {t('network.cloudflareDNS')}
                             </Button>
                             <Button
                               variant="outline"
                               size="sm"
                               onClick={() => setDnsServers(["208.67.222.222", "208.67.220.220"])}
                             >
-                              OpenDNS
+                              {t('network.openDNS')}
                             </Button>
                           </div>
                         </div>
@@ -788,11 +790,11 @@ export default function App() {
           {/* Audio Page */}
           {currentPage === "audio" && (
             <>
-              <h1 className="text-4xl font-bold mb-8 text-gray-800">Audio Monitor</h1>
+              <h1 className="text-4xl font-bold mb-8 text-gray-800">{t('audio.title')}</h1>
 
               {/* Audio Device Status Section */}
               <div className="mb-8">
-                <h2 className="text-2xl font-semibold mb-6 text-gray-700">Device Status</h2>
+                <h2 className="text-2xl font-semibold mb-6 text-gray-700">{t('audio.deviceStatus')}</h2>
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
                   {/* Microphone Status */}
                   <Card className="bg-white border-gray-200 shadow-md">
@@ -803,7 +805,7 @@ export default function App() {
                         ) : (
                           <MicOff className="w-4 h-4 text-red-500" />
                         )}
-                        Microphone
+                        {t('audio.microphone')}
                       </CardTitle>
                     </CardHeader>
                     <CardContent>
@@ -819,7 +821,7 @@ export default function App() {
                     <CardHeader className="pb-2">
                       <CardTitle className="text-sm font-medium text-gray-600 flex items-center gap-2">
                         <Speaker className="w-4 h-4 text-blue-600" />
-                        Output
+                        {t('audio.output')}
                       </CardTitle>
                     </CardHeader>
                     <CardContent>
@@ -833,7 +835,7 @@ export default function App() {
                     <CardHeader className="pb-2">
                       <CardTitle className="text-sm font-medium text-gray-600 flex items-center gap-2">
                         <Headphones className="w-4 h-4" />
-                        Quality
+                        {t('audio.quality')}
                       </CardTitle>
                     </CardHeader>
                     <CardContent>
@@ -847,7 +849,7 @@ export default function App() {
                     <CardHeader className="pb-2">
                       <CardTitle className="text-sm font-medium text-gray-600 flex items-center gap-2">
                         <Zap className="w-4 h-4" />
-                        Latency
+                        {t('audio.latency')}
                       </CardTitle>
                     </CardHeader>
                     <CardContent>
@@ -860,12 +862,12 @@ export default function App() {
 
               {/* Real-time Audio Levels */}
               <div className="mb-8">
-                <h2 className="text-2xl font-semibold mb-6 text-gray-700">Real-time Audio Levels</h2>
+                <h2 className="text-2xl font-semibold mb-6 text-gray-700">{t('audio.realTimeAudioLevels')}</h2>
                 <Card className="bg-white border-gray-200 shadow-md">
                   <CardContent className="p-6">
                     <div className="space-y-6">
-                      <AudioLevelMeter level={micLevel} label="Microphone Input" />
-                      <AudioLevelMeter level={outputLevel} label="Speaker Output" />
+                      <AudioLevelMeter level={micLevel} label={t('audio.microphoneInput')} />
+                      <AudioLevelMeter level={outputLevel} label={t('audio.speakerOutput')} />
                     </div>
                   </CardContent>
                 </Card>
@@ -873,31 +875,31 @@ export default function App() {
 
               {/* Audio Controls */}
               <div className="mb-8">
-                <h2 className="text-2xl font-semibold mb-6 text-gray-700">Audio Controls</h2>
+                <h2 className="text-2xl font-semibold mb-6 text-gray-700">{t('audio.audioControls')}</h2>
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                   {/* Microphone Controls */}
                   <Card className="bg-white border-gray-200 shadow-md">
                     <CardHeader>
                       <CardTitle className="text-lg font-semibold text-gray-800 flex items-center gap-2">
                         <Mic className="w-5 h-5" />
-                        Microphone Settings
+                        {t('audio.microphoneSettings')}
                       </CardTitle>
                     </CardHeader>
                     <CardContent className="space-y-4">
                       <div className="flex items-center justify-between">
-                        <Label className="text-sm font-medium text-gray-700">Enable Microphone</Label>
+                        <Label className="text-sm font-medium text-gray-700">{t('audio.enableMicrophone')}</Label>
                         <Button
                           variant={micEnabled ? "default" : "outline"}
                           size="sm"
                           onClick={() => setMicEnabled(!micEnabled)}
                           className={micEnabled ? "bg-green-500 hover:bg-green-600" : ""}
                         >
-                          {micEnabled ? "Enabled" : "Disabled"}
+                          {micEnabled ? t('audio.enabled') : t('audio.disabled')}
                         </Button>
                       </div>
 
                       <div className="space-y-2">
-                        <Label className="text-sm font-medium text-gray-700">Microphone Volume: {micVolume[0]}%</Label>
+                        <Label className="text-sm font-medium text-gray-700">{t('audio.microphoneVolume')}: {micVolume[0]}%</Label>
                         <Slider
                           value={micVolume}
                           onValueChange={setMicVolume}
@@ -909,16 +911,16 @@ export default function App() {
                       </div>
 
                       <div className="space-y-2">
-                        <Label className="text-sm font-medium text-gray-700">Input Device</Label>
+                        <Label className="text-sm font-medium text-gray-700">{t('audio.inputDevice')}</Label>
                         <select
                           value={selectedMicDevice}
                           onChange={(e: ChangeEvent<HTMLSelectElement>) => setSelectedMicDevice(e.target.value)}
                           className="w-full p-2 border border-gray-300 rounded-md text-sm"
                         >
-                          <option>Default Microphone</option>
-                          <option>USB Microphone (Blue Yeti)</option>
-                          <option>Headset Microphone</option>
-                          <option>Built-in Microphone</option>
+                          <option>{t('audio.defaultMicrophone')}</option>
+                          <option>{t('audio.usbMicrophone')}</option>
+                          <option>{t('audio.headsetMicrophone')}</option>
+                          <option>{t('audio.builtInMicrophone')}</option>
                         </select>
                       </div>
                     </CardContent>
@@ -929,12 +931,12 @@ export default function App() {
                     <CardHeader>
                       <CardTitle className="text-lg font-semibold text-gray-800 flex items-center gap-2">
                         <Speaker className="w-5 h-5" />
-                        Output Settings
+                        {t('audio.outputSettings')}
                       </CardTitle>
                     </CardHeader>
                     <CardContent className="space-y-4">
                       <div className="space-y-2">
-                        <Label className="text-sm font-medium text-gray-700">Master Volume: {outputVolume[0]}%</Label>
+                        <Label className="text-sm font-medium text-gray-700">{t('audio.masterVolume')}: {outputVolume[0]}%</Label>
                         <Slider
                           value={outputVolume}
                           onValueChange={setOutputVolume}
@@ -945,26 +947,26 @@ export default function App() {
                       </div>
 
                       <div className="space-y-2">
-                        <Label className="text-sm font-medium text-gray-700">Output Device</Label>
+                        <Label className="text-sm font-medium text-gray-700">{t('audio.outputDevice')}</Label>
                         <select
                           value={selectedOutputDevice}
                           onChange={(e: ChangeEvent<HTMLSelectElement>) => setSelectedOutputDevice(e.target.value)}
                           className="w-full p-2 border border-gray-300 rounded-md text-sm"
                         >
-                          <option>Default Speakers</option>
-                          <option>Headphones (Realtek Audio)</option>
-                          <option>USB Speakers</option>
-                          <option>Bluetooth Headphones</option>
+                          <option>{t('audio.defaultSpeakers')}</option>
+                          <option>{t('audio.headphones')}</option>
+                          <option>{t('audio.usbSpeakers')}</option>
+                          <option>{t('audio.bluetoothHeadphones')}</option>
                         </select>
                       </div>
 
                       <div className="flex gap-2">
                         <Button variant="outline" size="sm" className="flex-1 bg-transparent">
-                          Test Audio
+                          {t('audio.testAudio')}
                         </Button>
                         <Button variant="outline" size="sm" className="flex-1 bg-transparent">
                           <Settings className="w-4 h-4 mr-1" />
-                          Advanced
+                          {t('audio.advanced')}
                         </Button>
                       </div>
                     </CardContent>
@@ -974,7 +976,7 @@ export default function App() {
 
               {/* Audio Applications */}
               <div>
-                <h2 className="text-2xl font-semibold mb-6 text-gray-700">Active Audio Applications</h2>
+                <h2 className="text-2xl font-semibold mb-6 text-gray-700">{t('audio.activeAudioApplications')}</h2>
                 <Card className="bg-white border-gray-200 shadow-md">
                   <CardContent className="p-6">
                     <div className="space-y-4">
@@ -1005,17 +1007,17 @@ export default function App() {
           {/* Hotkeys Page */}
           {currentPage === "hotkeys" && (
             <>
-              <h1 className="text-4xl font-bold mb-8 text-gray-800">Hotkey Manager</h1>
+              <h1 className="text-4xl font-bold mb-8 text-gray-800">{t('hotkeys.title')}</h1>
 
               {/* Hotkey Statistics */}
               <div className="mb-8">
-                <h2 className="text-2xl font-semibold mb-6 text-gray-700">Hotkey Overview</h2>
+                <h2 className="text-2xl font-semibold mb-6 text-gray-700">{t('hotkeys.hotkeyOverview')}</h2>
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
                   <Card className="bg-white border-gray-200 shadow-md">
                     <CardHeader className="pb-2">
                       <CardTitle className="text-sm font-medium text-gray-600 flex items-center gap-2">
                         <Keyboard className="w-4 h-4" />
-                        Custom Hotkeys
+                        {t('hotkeys.customHotkeys')}
                       </CardTitle>
                     </CardHeader>
                     <CardContent>
@@ -1030,7 +1032,7 @@ export default function App() {
                     <CardHeader className="pb-2">
                       <CardTitle className="text-sm font-medium text-gray-600 flex items-center gap-2">
                         <Settings className="w-4 h-4" />
-                        System Hotkeys
+                        {t('hotkeys.systemHotkeys')}
                       </CardTitle>
                     </CardHeader>
                     <CardContent>
@@ -1043,7 +1045,7 @@ export default function App() {
                     <CardHeader className="pb-2">
                       <CardTitle className="text-sm font-medium text-gray-600 flex items-center gap-2">
                         <Monitor className="w-4 h-4" />
-                        App Hotkeys
+                        {t('hotkeys.appHotkeys')}
                       </CardTitle>
                     </CardHeader>
                     <CardContent>
@@ -1056,7 +1058,7 @@ export default function App() {
                     <CardHeader className="pb-2">
                       <CardTitle className="text-sm font-medium text-gray-600 flex items-center gap-2">
                         <AlertTriangle className="w-4 h-4" />
-                        Conflicts
+                        {t('hotkeys.conflicts')}
                       </CardTitle>
                     </CardHeader>
                     <CardContent>
@@ -1069,20 +1071,20 @@ export default function App() {
 
               {/* Add New Hotkey */}
               <div className="mb-8">
-                <h2 className="text-2xl font-semibold mb-6 text-gray-700">Create New Hotkey</h2>
+                <h2 className="text-2xl font-semibold mb-6 text-gray-700">{t('hotkeys.createNewHotkey')}</h2>
                 <Card className="bg-white border-gray-200 shadow-md">
                   <CardContent className="p-6">
                     <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 items-end">
                       <div>
-                        <Label className="text-sm font-medium text-gray-700">Hotkey Combination</Label>
+                        <Label className="text-sm font-medium text-gray-700">{t('hotkeys.hotkeyCombination')}</Label>
                         <HotkeyCapture currentHotkey={newHotkey} onCapture={setNewHotkey} />
                       </div>
                       <div>
-                        <Label className="text-sm font-medium text-gray-700">Action Description</Label>
+                        <Label className="text-sm font-medium text-gray-700">{t('hotkeys.actionDescription')}</Label>
                         <Input
                           value={newHotkeyAction}
                           onChange={(e: ChangeEvent<HTMLInputElement>) => setNewHotkeyAction(e.target.value)}
-                          placeholder="Enter action description"
+                          placeholder={t('hotkeys.enterActionDescription')}
                         />
                       </div>
                       <Button
@@ -1091,15 +1093,15 @@ export default function App() {
                         className="bg-blue-500 hover:bg-blue-600"
                       >
                         <Plus className="w-4 h-4 mr-2" />
-                        Add Hotkey
+                        {t('hotkeys.addHotkey')}
                       </Button>
                     </div>
                     {newHotkey && checkHotkeyConflict(newHotkey) && (
                       <div className="mt-4 p-3 bg-red-50 border border-red-200 rounded-lg flex items-center gap-2">
                         <AlertTriangle className="w-4 h-4 text-red-500" />
-                        <span className="text-sm text-red-700">
-                          Warning: This hotkey conflicts with existing bindings
-                        </span>
+                       <span className="text-sm text-red-700">
+                         {t('hotkeys.warningConflict')}
+                       </span>
                       </div>
                     )}
                   </CardContent>
@@ -1108,7 +1110,7 @@ export default function App() {
 
               {/* Custom Hotkeys */}
               <div className="mb-8">
-                <h2 className="text-2xl font-semibold mb-6 text-gray-700">Custom Hotkeys</h2>
+                <h2 className="text-2xl font-semibold mb-6 text-gray-700">{t('hotkeys.customHotkeys')}</h2>
                 <Card className="bg-white border-gray-200 shadow-md">
                   <CardContent className="p-6">
                     <div className="space-y-4">
@@ -1176,7 +1178,7 @@ export default function App() {
 
                       {customHotkeys.length === 0 && (
                         <div className="text-center py-8 text-gray-500">
-                          No custom hotkeys configured. Create one above to get started.
+                          {t('hotkeys.noCustomHotkeys')}
                         </div>
                       )}
                     </div>
@@ -1186,7 +1188,7 @@ export default function App() {
 
               {/* System Hotkeys */}
               <div className="mb-8">
-                <h2 className="text-2xl font-semibold mb-6 text-gray-700">System Hotkeys</h2>
+                <h2 className="text-2xl font-semibold mb-6 text-gray-700">{t('hotkeys.systemHotkeys')}</h2>
                 <Card className="bg-white border-gray-200 shadow-md">
                   <CardContent className="p-6">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -1206,7 +1208,7 @@ export default function App() {
 
               {/* Application Hotkeys */}
               <div>
-                <h2 className="text-2xl font-semibold mb-6 text-gray-700">Application Hotkeys</h2>
+                <h2 className="text-2xl font-semibold mb-6 text-gray-700">{t('hotkeys.applicationHotkeys')}</h2>
                 <Card className="bg-white border-gray-200 shadow-md">
                   <CardContent className="p-6">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -1229,38 +1231,38 @@ export default function App() {
           {/* Disk Page */}
           {currentPage === "disk" && (
             <>
-              <h1 className="text-3xl font-bold mb-6 text-gray-800">Disk Management</h1>
+              <h1 className="text-3xl font-bold mb-6 text-gray-800">{t('disk.title')}</h1>
 
               {/* Disk Overview Section */}
               <div className="mb-6">
-                <h2 className="text-xl font-semibold mb-4 text-gray-700">Storage Overview</h2>
+                <h2 className="text-xl font-semibold mb-4 text-gray-700">{t('disk.storageOverview')}</h2>
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                   <Card className="bg-white border-gray-200 shadow-sm">
                     <CardContent className="p-4">
-                      <div className="text-xs text-gray-500 mb-1">Total Storage</div>
+                      <div className="text-xs text-gray-500 mb-1">{t('disk.totalStorage')}</div>
                       <div className="text-2xl font-bold text-gray-800">3TB</div>
-                      <div className="text-xs text-gray-600">Available Space</div>
+                      <div className="text-xs text-gray-600">{t('disk.availableSpace')}</div>
                     </CardContent>
                   </Card>
                   <Card className="bg-white border-gray-200 shadow-sm">
                     <CardContent className="p-4">
-                      <div className="text-xs text-gray-500 mb-1">Used Space</div>
+                      <div className="text-xs text-gray-500 mb-1">{t('disk.usedSpace')}</div>
                       <div className="text-2xl font-bold text-blue-600">1.2TB</div>
-                      <div className="text-xs text-gray-600">40% Utilized</div>
+                      <div className="text-xs text-gray-600">{t('disk.utilized')}</div>
                     </CardContent>
                   </Card>
                   <Card className="bg-white border-gray-200 shadow-sm">
                     <CardContent className="p-4">
-                      <div className="text-xs text-gray-500 mb-1">Free Space</div>
+                      <div className="text-xs text-gray-500 mb-1">{t('disk.freeSpace')}</div>
                       <div className="text-2xl font-bold text-green-600">1.8TB</div>
-                      <div className="text-xs text-gray-600">60% Available</div>
+                      <div className="text-xs text-gray-600">{t('disk.available')}</div>
                     </CardContent>
                   </Card>
                   <Card className="bg-white border-gray-200 shadow-sm">
                     <CardContent className="p-4">
-                      <div className="text-xs text-gray-500 mb-1">Active Drives</div>
+                      <div className="text-xs text-gray-500 mb-1">{t('disk.activeDrives')}</div>
                       <div className="text-2xl font-bold text-gray-800">3</div>
-                      <div className="text-xs text-gray-600">All Healthy</div>
+                      <div className="text-xs text-gray-600">{t('disk.allHealthy')}</div>
                     </CardContent>
                   </Card>
                 </div>
@@ -1268,7 +1270,7 @@ export default function App() {
 
               {/* Individual Drives Section */}
               <div className="mb-6">
-                <h2 className="text-xl font-semibold mb-4 text-gray-700">Drive Details</h2>
+                <h2 className="text-xl font-semibold mb-4 text-gray-700">{t('disk.driveDetails')}</h2>
                 <div className="space-y-4">
                   {/* Drive C: - Primary SSD */}
                   <Card className="bg-white border-gray-200 shadow-sm">
@@ -1291,15 +1293,15 @@ export default function App() {
 
                       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
                         <div>
-                          <div className="text-xs text-gray-500 mb-1">Capacity</div>
+                          <div className="text-xs text-gray-500 mb-1">{t('disk.capacity')}</div>
                           <div className="text-sm font-semibold text-gray-800">1TB (931GB)</div>
                         </div>
                         <div>
-                          <div className="text-xs text-gray-500 mb-1">Used Space</div>
+                          <div className="text-xs text-gray-500 mb-1">{t('disk.usedSpace')}</div>
                           <div className="text-sm font-semibold text-gray-800">650GB (70%)</div>
                         </div>
                         <div>
-                          <div className="text-xs text-gray-500 mb-1">Free Space</div>
+                          <div className="text-xs text-gray-500 mb-1">{t('disk.freeSpace')}</div>
                           <div className="text-sm font-semibold text-gray-800">281GB (30%)</div>
                         </div>
                       </div>
@@ -1307,7 +1309,7 @@ export default function App() {
                       {/* Usage Bar */}
                       <div className="mb-4">
                         <div className="flex justify-between text-xs text-gray-500 mb-1">
-                          <span>Disk Usage</span>
+                          <span>{t('disk.diskUsage')}</span>
                           <span>70%</span>
                         </div>
                         <div className="w-full bg-gray-200 rounded-full h-2">
@@ -1317,19 +1319,19 @@ export default function App() {
 
                       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-xs">
                         <div>
-                          <div className="text-gray-500">Interface</div>
+                          <div className="text-gray-500">{t('disk.interface')}</div>
                           <div className="font-medium">NVMe PCIe 4.0</div>
                         </div>
                         <div>
-                          <div className="text-gray-500">Read Speed</div>
+                          <div className="text-gray-500">{t('disk.readSpeed')}</div>
                           <div className="font-medium">7,000 MB/s</div>
                         </div>
                         <div>
-                          <div className="text-gray-500">Write Speed</div>
+                          <div className="text-gray-500">{t('disk.writeSpeed')}</div>
                           <div className="font-medium">5,100 MB/s</div>
                         </div>
                         <div>
-                          <div className="text-gray-500">Temperature</div>
+                          <div className="text-gray-500">{t('disk.temperature')}</div>
                           <div className="font-medium text-green-600">42°C</div>
                         </div>
                       </div>
@@ -1357,15 +1359,15 @@ export default function App() {
 
                       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
                         <div>
-                          <div className="text-xs text-gray-500 mb-1">Capacity</div>
+                          <div className="text-xs text-gray-500 mb-1">{t('disk.capacity')}</div>
                           <div className="text-sm font-semibold text-gray-800">2TB (1.86TB)</div>
                         </div>
                         <div>
-                          <div className="text-xs text-gray-500 mb-1">Used Space</div>
+                          <div className="text-xs text-gray-500 mb-1">{t('disk.usedSpace')}</div>
                           <div className="text-sm font-semibold text-gray-800">580GB (30%)</div>
                         </div>
                         <div>
-                          <div className="text-xs text-gray-500 mb-1">Free Space</div>
+                          <div className="text-xs text-gray-500 mb-1">{t('disk.freeSpace')}</div>
                           <div className="text-sm font-semibold text-gray-800">1.28TB (70%)</div>
                         </div>
                       </div>
@@ -1373,7 +1375,7 @@ export default function App() {
                       {/* Usage Bar */}
                       <div className="mb-4">
                         <div className="flex justify-between text-xs text-gray-500 mb-1">
-                          <span>Disk Usage</span>
+                          <span>{t('disk.diskUsage')}</span>
                           <span>30%</span>
                         </div>
                         <div className="w-full bg-gray-200 rounded-full h-2">
@@ -1383,19 +1385,19 @@ export default function App() {
 
                       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-xs">
                         <div>
-                          <div className="text-gray-500">Interface</div>
+                          <div className="text-gray-500">{t('disk.interface')}</div>
                           <div className="font-medium">SATA III</div>
                         </div>
                         <div>
-                          <div className="text-gray-500">RPM</div>
+                          <div className="text-gray-500">{t('disk.rpm')}</div>
                           <div className="font-medium">7,200 RPM</div>
                         </div>
                         <div>
-                          <div className="text-gray-500">Cache</div>
+                          <div className="text-gray-500">{t('disk.cache')}</div>
                           <div className="font-medium">256MB</div>
                         </div>
                         <div>
-                          <div className="text-gray-500">Temperature</div>
+                          <div className="text-gray-500">{t('disk.temperature')}</div>
                           <div className="font-medium text-green-600">38°C</div>
                         </div>
                       </div>
@@ -1423,20 +1425,20 @@ export default function App() {
 
                       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-xs">
                         <div>
-                          <div className="text-gray-500">Interface</div>
+                          <div className="text-gray-500">{t('disk.interface')}</div>
                           <div className="font-medium">USB 3.2</div>
                         </div>
                         <div>
-                          <div className="text-gray-500">Read Speed</div>
+                          <div className="text-gray-500">{t('disk.readSpeed')}</div>
                           <div className="font-medium">1,050 MB/s</div>
                         </div>
                         <div>
-                          <div className="text-gray-500">Write Speed</div>
+                          <div className="text-gray-500">{t('disk.writeSpeed')}</div>
                           <div className="font-medium">1,000 MB/s</div>
                         </div>
                         <div>
-                          <div className="text-gray-500">Status</div>
-                          <div className="font-medium text-blue-600">Removable</div>
+                          <div className="text-gray-500">{t('disk.status')}</div>
+                          <div className="font-medium text-blue-600">{t('disk.removable')}</div>
                         </div>
                       </div>
                     </CardContent>
@@ -1446,39 +1448,39 @@ export default function App() {
 
               {/* Disk Performance & Tools */}
               <div className="mb-6">
-                <h2 className="text-xl font-semibold mb-4 text-gray-700">Performance & Tools</h2>
+                <h2 className="text-xl font-semibold mb-4 text-gray-700">{t('disk.performanceTools')}</h2>
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                   {/* Performance Metrics */}
                   <Card className="bg-white border-gray-200 shadow-sm">
                     <CardHeader>
-                      <CardTitle className="text-lg font-semibold text-gray-800">Real-time Performance</CardTitle>
+                      <CardTitle className="text-lg font-semibold text-gray-800">{t('disk.realTimePerformance')}</CardTitle>
                     </CardHeader>
                     <CardContent className="space-y-4">
                       <div className="grid grid-cols-2 gap-4">
                         <div>
-                          <div className="text-xs text-gray-500 mb-1">Read Activity</div>
+                          <div className="text-xs text-gray-500 mb-1">{t('disk.readActivity')}</div>
                           <div className="text-lg font-bold text-blue-600">25 MB/s</div>
-                          <div className="text-xs text-gray-600">Current</div>
+                          <div className="text-xs text-gray-600">{t('disk.current')}</div>
                         </div>
                         <div>
-                          <div className="text-xs text-gray-500 mb-1">Write Activity</div>
+                          <div className="text-xs text-gray-500 mb-1">{t('disk.writeActivity')}</div>
                           <div className="text-lg font-bold text-green-600">12 MB/s</div>
-                          <div className="text-xs text-gray-600">Current</div>
+                          <div className="text-xs text-gray-600">{t('disk.current')}</div>
                         </div>
                         <div>
-                          <div className="text-xs text-gray-500 mb-1">Queue Length</div>
+                          <div className="text-xs text-gray-500 mb-1">{t('disk.queueLength')}</div>
                           <div className="text-lg font-bold text-gray-800">2.1</div>
-                          <div className="text-xs text-gray-600">Average</div>
+                          <div className="text-xs text-gray-600">{t('disk.average')}</div>
                         </div>
                         <div>
-                          <div className="text-xs text-gray-500 mb-1">Response Time</div>
+                          <div className="text-xs text-gray-500 mb-1">{t('disk.responseTime')}</div>
                           <div className="text-lg font-bold text-yellow-600">8ms</div>
-                          <div className="text-xs text-gray-600">Average</div>
+                          <div className="text-xs text-gray-600">{t('disk.average')}</div>
                         </div>
                       </div>
 
                       <div className="pt-4">
-                        <div className="text-xs text-gray-500 mb-2">Disk Activity (Last 60s)</div>
+                        <div className="text-xs text-gray-500 mb-2">{t('disk.diskActivity')}</div>
                         <div className="h-16">
                           <MiniChart data={diskData} />
                         </div>
@@ -1489,35 +1491,35 @@ export default function App() {
                   {/* Disk Tools */}
                   <Card className="bg-white border-gray-200 shadow-sm">
                     <CardHeader>
-                      <CardTitle className="text-lg font-semibold text-gray-800">Disk Management Tools</CardTitle>
+                      <CardTitle className="text-lg font-semibold text-gray-800">{t('disk.diskManagementTools')}</CardTitle>
                     </CardHeader>
                     <CardContent className="space-y-4">
                       <div className="grid grid-cols-1 gap-3">
                         <Button variant="outline" className="justify-start h-auto p-4 bg-transparent">
                           <div className="text-left">
-                            <div className="font-medium">Disk Cleanup</div>
-                            <div className="text-xs text-gray-500">Remove temporary files and free up space</div>
+                            <div className="font-medium">{t('disk.diskCleanup')}</div>
+                            <div className="text-xs text-gray-500">{t('disk.diskCleanupDesc')}</div>
                           </div>
                         </Button>
 
                         <Button variant="outline" className="justify-start h-auto p-4 bg-transparent">
                           <div className="text-left">
-                            <div className="font-medium">Defragment Drives</div>
-                            <div className="text-xs text-gray-500">Optimize drive performance (HDD only)</div>
+                            <div className="font-medium">{t('disk.defragmentDrives')}</div>
+                            <div className="text-xs text-gray-500">{t('disk.defragmentDrivesDesc')}</div>
                           </div>
                         </Button>
 
                         <Button variant="outline" className="justify-start h-auto p-4 bg-transparent">
                           <div className="text-left">
-                            <div className="font-medium">Check Disk Health</div>
-                            <div className="text-xs text-gray-500">Run SMART diagnostics and health check</div>
+                            <div className="font-medium">{t('disk.checkDiskHealth')}</div>
+                            <div className="text-xs text-gray-500">{t('disk.checkDiskHealthDesc')}</div>
                           </div>
                         </Button>
 
                         <Button variant="outline" className="justify-start h-auto p-4 bg-transparent">
                           <div className="text-left">
-                            <div className="font-medium">Disk Properties</div>
-                            <div className="text-xs text-gray-500">View detailed drive information</div>
+                            <div className="font-medium">{t('disk.diskProperties')}</div>
+                            <div className="text-xs text-gray-500">{t('disk.diskPropertiesDesc')}</div>
                           </div>
                         </Button>
                       </div>
@@ -1528,29 +1530,29 @@ export default function App() {
 
               {/* Storage Analysis */}
               <div>
-                <h2 className="text-xl font-semibold mb-4 text-gray-700">Storage Analysis</h2>
+                <h2 className="text-xl font-semibold mb-4 text-gray-700">{t('disk.storageAnalysis')}</h2>
                 <Card className="bg-white border-gray-200 shadow-sm">
                   <CardContent className="p-6">
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
                       <div className="text-center">
                         <div className="text-2xl font-bold text-blue-600 mb-2">450GB</div>
-                        <div className="text-sm text-gray-600 mb-1">System Files</div>
-                        <div className="text-xs text-gray-500">Windows, Programs, Updates</div>
+                        <div className="text-sm text-gray-600 mb-1">{t('disk.systemFiles')}</div>
+                        <div className="text-xs text-gray-500">{t('disk.systemFilesDesc')}</div>
                       </div>
                       <div className="text-center">
                         <div className="text-2xl font-bold text-green-600 mb-2">320GB</div>
-                        <div className="text-sm text-gray-600 mb-1">Documents</div>
-                        <div className="text-xs text-gray-500">Photos, Videos, Files</div>
+                        <div className="text-sm text-gray-600 mb-1">{t('disk.documents')}</div>
+                        <div className="text-xs text-gray-500">{t('disk.documentsDesc')}</div>
                       </div>
                       <div className="text-center">
                         <div className="text-2xl font-bold text-purple-600 mb-2">180GB</div>
-                        <div className="text-sm text-gray-600 mb-1">Applications</div>
-                        <div className="text-xs text-gray-500">Installed Programs</div>
+                        <div className="text-sm text-gray-600 mb-1">{t('disk.applications')}</div>
+                        <div className="text-xs text-gray-500">{t('disk.applicationsDesc')}</div>
                       </div>
                       <div className="text-center">
                         <div className="text-2xl font-bold text-orange-600 mb-2">85GB</div>
-                        <div className="text-sm text-gray-600 mb-1">Temporary</div>
-                        <div className="text-xs text-gray-500">Cache, Temp Files</div>
+                        <div className="text-sm text-gray-600 mb-1">{t('disk.temporary')}</div>
+                        <div className="text-xs text-gray-500">{t('disk.temporaryDesc')}</div>
                       </div>
                     </div>
                   </CardContent>
@@ -1562,23 +1564,26 @@ export default function App() {
           {/* Settings Page */}
           {currentPage === "settings" && (
             <>
-              <h1 className="text-3xl font-bold mb-6 text-gray-800">Application Settings</h1>
+              <h1 className="text-3xl font-bold mb-6 text-gray-800">{t('settings.title')}</h1>
 
               {/* General Settings Section */}
               <div className="mb-6">
-                <h2 className="text-xl font-semibold mb-4 text-gray-700">General Settings</h2>
+                <h2 className="text-xl font-semibold mb-4 text-gray-700">{t('settings.generalSettings')}</h2>
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                   {/* Language & Display */}
                   <Card className="bg-white border-gray-200 shadow-sm">
                     <CardHeader>
-                      <CardTitle className="text-lg font-semibold text-gray-800">Language & Display</CardTitle>
+                      <CardTitle className="text-lg font-semibold text-gray-800">{t('settings.languageDisplay')}</CardTitle>
                     </CardHeader>
                     <CardContent className="space-y-4">
                       <div className="space-y-2">
-                        <Label className="text-sm font-medium text-gray-700">Language</Label>
+                        <Label className="text-sm font-medium text-gray-700">{t('settings.language')}</Label>
                         <select
                           value={language}
-                          onChange={(e: ChangeEvent<HTMLSelectElement>) => setLanguage(e.target.value)}
+                          onChange={(e: ChangeEvent<HTMLSelectElement>) => {
+                            setLanguage(e.target.value);
+                            i18n.changeLanguage(e.target.value === 'English' ? 'en' : 'zh');
+                          }}
                           className="w-full p-2 border border-gray-300 rounded-md text-sm"
                         >
                           <option>English</option>
@@ -1593,7 +1598,7 @@ export default function App() {
                       </div>
 
                       <div className="space-y-2">
-                        <Label className="text-sm font-medium text-gray-700">Font Size: {fontSize[0]}px</Label>
+                        <Label className="text-sm font-medium text-gray-700">{t('settings.fontSize')}: {fontSize[0]}px</Label>
                         <Slider
                           value={fontSize}
                           onValueChange={setFontSize}
@@ -1603,22 +1608,22 @@ export default function App() {
                           className="w-full"
                         />
                         <div className="flex justify-between text-xs text-gray-500">
-                          <span>Small (10px)</span>
-                          <span>Medium (14px)</span>
-                          <span>Large (24px)</span>
+                          <span>{t('settings.small')}</span>
+                          <span>{t('settings.medium')}</span>
+                          <span>{t('settings.large')}</span>
                         </div>
                       </div>
 
                       <div className="space-y-2">
-                        <Label className="text-sm font-medium text-gray-700">Theme</Label>
+                        <Label className="text-sm font-medium text-gray-700">{t('settings.theme')}</Label>
                         <select
                           value={theme}
                           onChange={(e: ChangeEvent<HTMLSelectElement>) => setTheme(e.target.value)}
                           className="w-full p-2 border border-gray-300 rounded-md text-sm"
                         >
-                          <option>Light</option>
-                          <option>Dark</option>
-                          <option>Auto (System)</option>
+                          <option>{t('settings.light')}</option>
+                          <option>{t('settings.dark')}</option>
+                          <option>{t('settings.auto')}</option>
                         </select>
                       </div>
                     </CardContent>
@@ -1627,13 +1632,13 @@ export default function App() {
                   {/* Application Behavior */}
                   <Card className="bg-white border-gray-200 shadow-sm">
                     <CardHeader>
-                      <CardTitle className="text-lg font-semibold text-gray-800">Application Behavior</CardTitle>
+                      <CardTitle className="text-lg font-semibold text-gray-800">{t('settings.applicationBehavior')}</CardTitle>
                     </CardHeader>
                     <CardContent className="space-y-4">
                       <div className="flex items-center justify-between">
                         <div>
-                          <Label className="text-sm font-medium text-gray-700">Start with Windows</Label>
-                          <div className="text-xs text-gray-500">Launch automatically when system starts</div>
+                          <Label className="text-sm font-medium text-gray-700">{t('settings.startWithWindows')}</Label>
+                          <div className="text-xs text-gray-500">{t('settings.startWithWindowsDesc')}</div>
                         </div>
                         <Button
                           variant={autoStart ? "default" : "outline"}
@@ -1641,14 +1646,14 @@ export default function App() {
                           onClick={() => setAutoStart(!autoStart)}
                           className={autoStart ? "bg-blue-500 hover:bg-blue-600" : ""}
                         >
-                          {autoStart ? "Enabled" : "Disabled"}
+                          {autoStart ? t('settings.enabled') : t('settings.disabled')}
                         </Button>
                       </div>
 
                       <div className="flex items-center justify-between">
                         <div>
-                          <Label className="text-sm font-medium text-gray-700">Minimize to System Tray</Label>
-                          <div className="text-xs text-gray-500">Hide in system tray when minimized</div>
+                          <Label className="text-sm font-medium text-gray-700">{t('settings.minimizeToTray')}</Label>
+                          <div className="text-xs text-gray-500">{t('settings.minimizeToTrayDesc')}</div>
                         </div>
                         <Button
                           variant={minimizeToTray ? "default" : "outline"}
@@ -1656,14 +1661,14 @@ export default function App() {
                           onClick={() => setMinimizeToTray(!minimizeToTray)}
                           className={minimizeToTray ? "bg-blue-500 hover:bg-blue-600" : ""}
                         >
-                          {minimizeToTray ? "Enabled" : "Disabled"}
+                          {minimizeToTray ? t('settings.enabled') : t('settings.disabled')}
                         </Button>
                       </div>
 
                       <div className="flex items-center justify-between">
                         <div>
-                          <Label className="text-sm font-medium text-gray-700">Show Notifications</Label>
-                          <div className="text-xs text-gray-500">Display system alerts and warnings</div>
+                          <Label className="text-sm font-medium text-gray-700">{t('settings.showNotifications')}</Label>
+                          <div className="text-xs text-gray-500">{t('settings.showNotificationsDesc')}</div>
                         </div>
                         <Button
                           variant={showNotifications ? "default" : "outline"}
@@ -1671,7 +1676,7 @@ export default function App() {
                           onClick={() => setShowNotifications(!showNotifications)}
                           className={showNotifications ? "bg-blue-500 hover:bg-blue-600" : ""}
                         >
-                          {showNotifications ? "Enabled" : "Disabled"}
+                          {showNotifications ? t('settings.enabled') : t('settings.disabled')}
                         </Button>
                       </div>
                     </CardContent>
@@ -1681,17 +1686,17 @@ export default function App() {
 
               {/* Performance Settings Section */}
               <div className="mb-6">
-                <h2 className="text-xl font-semibold mb-4 text-gray-700">Performance & Monitoring</h2>
+                <h2 className="text-xl font-semibold mb-4 text-gray-700">{t('settings.performanceMonitoring')}</h2>
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                   {/* Update Settings */}
                   <Card className="bg-white border-gray-200 shadow-sm">
                     <CardHeader>
-                      <CardTitle className="text-lg font-semibold text-gray-800">Update Frequency</CardTitle>
+                      <CardTitle className="text-lg font-semibold text-gray-800">{t('settings.updateFrequency')}</CardTitle>
                     </CardHeader>
                     <CardContent className="space-y-4">
                       <div className="space-y-2">
                         <Label className="text-sm font-medium text-gray-700">
-                          Refresh Rate: {updateFrequency[0]}ms
+                          {t('settings.refreshRate')}: {updateFrequency[0]}ms
                         </Label>
                         <Slider
                           value={updateFrequency}
@@ -1702,15 +1707,15 @@ export default function App() {
                           className="w-full"
                         />
                         <div className="flex justify-between text-xs text-gray-500">
-                          <span>Fast (250ms)</span>
-                          <span>Normal (1s)</span>
-                          <span>Slow (5s)</span>
+                          <span>{t('settings.fast')}</span>
+                          <span>{t('settings.normal')}</span>
+                          <span>{t('settings.slow')}</span>
                         </div>
                       </div>
 
                       <div className="space-y-2">
                         <Label className="text-sm font-medium text-gray-700">
-                          Data Retention: {dataRetention[0]} days
+                          {t('settings.dataRetention')}: {dataRetention[0]} {t('settings.days')}
                         </Label>
                         <Slider
                           value={dataRetention}
@@ -1721,22 +1726,22 @@ export default function App() {
                           className="w-full"
                         />
                         <div className="flex justify-between text-xs text-gray-500">
-                          <span>1 day</span>
-                          <span>7 days</span>
-                          <span>30 days</span>
+                          <span>1 {t('settings.day')}</span>
+                          <span>7 {t('settings.days')}</span>
+                          <span>30 {t('settings.days')}</span>
                         </div>
                       </div>
 
                       <div className="space-y-2">
-                        <Label className="text-sm font-medium text-gray-700">Temperature Unit</Label>
+                        <Label className="text-sm font-medium text-gray-700">{t('settings.temperatureUnit')}</Label>
                         <select
                           value={temperatureUnit}
                           onChange={(e: ChangeEvent<HTMLSelectElement>) => setTemperatureUnit(e.target.value)}
                           className="w-full p-2 border border-gray-300 rounded-md text-sm"
                         >
-                          <option>Celsius (°C)</option>
-                          <option>Fahrenheit (°F)</option>
-                          <option>Kelvin (K)</option>
+                          <option>{t('settings.celsius')}</option>
+                          <option>{t('settings.fahrenheit')}</option>
+                          <option>{t('settings.kelvin')}</option>
                         </select>
                       </div>
                     </CardContent>
@@ -1745,12 +1750,12 @@ export default function App() {
                   {/* Alert Settings */}
                   <Card className="bg-white border-gray-200 shadow-sm">
                     <CardHeader>
-                      <CardTitle className="text-lg font-semibold text-gray-800">Alert Thresholds</CardTitle>
+                      <CardTitle className="text-lg font-semibold text-gray-800">{t('settings.alertThresholds')}</CardTitle>
                     </CardHeader>
                     <CardContent className="space-y-4">
                       <div className="space-y-3">
                         <div className="flex items-center justify-between">
-                          <Label className="text-sm font-medium text-gray-700">CPU Usage Alert</Label>
+                          <Label className="text-sm font-medium text-gray-700">{t('settings.cpuUsageAlert')}</Label>
                           <div className="text-sm text-gray-600">85%</div>
                         </div>
                         <Slider value={[85]} max={100} step={5} className="w-full" />
@@ -1758,7 +1763,7 @@ export default function App() {
 
                       <div className="space-y-3">
                         <div className="flex items-center justify-between">
-                          <Label className="text-sm font-medium text-gray-700">Memory Usage Alert</Label>
+                          <Label className="text-sm font-medium text-gray-700">{t('settings.memoryUsageAlert')}</Label>
                           <div className="text-sm text-gray-600">90%</div>
                         </div>
                         <Slider value={[90]} max={100} step={5} className="w-full" />
@@ -1766,7 +1771,7 @@ export default function App() {
 
                       <div className="space-y-3">
                         <div className="flex items-center justify-between">
-                          <Label className="text-sm font-medium text-gray-700">Disk Space Alert</Label>
+                          <Label className="text-sm font-medium text-gray-700">{t('settings.diskSpaceAlert')}</Label>
                           <div className="text-sm text-gray-600">95%</div>
                         </div>
                         <Slider value={[95]} max={100} step={5} className="w-full" />
@@ -1774,7 +1779,7 @@ export default function App() {
 
                       <div className="space-y-3">
                         <div className="flex items-center justify-between">
-                          <Label className="text-sm font-medium text-gray-700">Temperature Alert</Label>
+                          <Label className="text-sm font-medium text-gray-700">{t('settings.temperatureAlert')}</Label>
                           <div className="text-sm text-gray-600">80°C</div>
                         </div>
                         <Slider value={[80]} min={50} max={100} step={5} className="w-full" />
@@ -1786,33 +1791,33 @@ export default function App() {
 
               {/* Advanced Settings Section */}
               <div className="mb-6">
-                <h2 className="text-xl font-semibold mb-4 text-gray-700">Advanced Settings</h2>
+                <h2 className="text-xl font-semibold mb-4 text-gray-700">{t('settings.advancedSettings')}</h2>
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                   {/* Data Export */}
                   <Card className="bg-white border-gray-200 shadow-sm">
                     <CardHeader>
-                      <CardTitle className="text-lg font-semibold text-gray-800">Data Management</CardTitle>
+                      <CardTitle className="text-lg font-semibold text-gray-800">{t('settings.dataManagement')}</CardTitle>
                     </CardHeader>
                     <CardContent className="space-y-4">
                       <div className="space-y-3">
                         <Button variant="outline" className="w-full justify-start bg-transparent">
                           <div className="text-left">
-                            <div className="font-medium">Export Performance Data</div>
-                            <div className="text-xs text-gray-500">Save monitoring data to CSV file</div>
+                            <div className="font-medium">{t('settings.exportPerformanceData')}</div>
+                            <div className="text-xs text-gray-500">{t('settings.exportPerformanceDataDesc')}</div>
                           </div>
                         </Button>
 
                         <Button variant="outline" className="w-full justify-start bg-transparent">
                           <div className="text-left">
-                            <div className="font-medium">Import Settings</div>
-                            <div className="text-xs text-gray-500">Load configuration from backup file</div>
+                            <div className="font-medium">{t('settings.importSettings')}</div>
+                            <div className="text-xs text-gray-500">{t('settings.importSettingsDesc')}</div>
                           </div>
                         </Button>
 
                         <Button variant="outline" className="w-full justify-start bg-transparent">
                           <div className="text-left">
-                            <div className="font-medium">Export Settings</div>
-                            <div className="text-xs text-gray-500">Save current configuration as backup</div>
+                            <div className="font-medium">{t('settings.exportSettings')}</div>
+                            <div className="text-xs text-gray-500">{t('settings.exportSettingsDesc')}</div>
                           </div>
                         </Button>
 
@@ -1821,8 +1826,8 @@ export default function App() {
                           className="w-full justify-start text-red-600 hover:text-red-700 bg-transparent"
                         >
                           <div className="text-left">
-                            <div className="font-medium">Clear All Data</div>
-                            <div className="text-xs text-gray-500">Remove all stored performance data</div>
+                            <div className="font-medium">{t('settings.clearAllData')}</div>
+                            <div className="text-xs text-gray-500">{t('settings.clearAllDataDesc')}</div>
                           </div>
                         </Button>
                       </div>
@@ -1832,35 +1837,35 @@ export default function App() {
                   {/* System Integration */}
                   <Card className="bg-white border-gray-200 shadow-sm">
                     <CardHeader>
-                      <CardTitle className="text-lg font-semibold text-gray-800">System Integration</CardTitle>
+                      <CardTitle className="text-lg font-semibold text-gray-800">{t('settings.systemIntegration')}</CardTitle>
                     </CardHeader>
                     <CardContent className="space-y-4">
                       <div className="space-y-3">
                         <Button variant="outline" className="w-full justify-start bg-transparent">
                           <div className="text-left">
-                            <div className="font-medium">Windows Performance Toolkit</div>
-                            <div className="text-xs text-gray-500">Enable advanced system monitoring</div>
+                            <div className="font-medium">{t('settings.windowsPerformanceToolkit')}</div>
+                            <div className="text-xs text-gray-500">{t('settings.windowsPerformanceToolkitDesc')}</div>
                           </div>
                         </Button>
 
                         <Button variant="outline" className="w-full justify-start bg-transparent">
                           <div className="text-left">
-                            <div className="font-medium">Hardware Monitoring</div>
-                            <div className="text-xs text-gray-500">Access sensor data and temperatures</div>
+                            <div className="font-medium">{t('settings.hardwareMonitoring')}</div>
+                            <div className="text-xs text-gray-500">{t('settings.hardwareMonitoringDesc')}</div>
                           </div>
                         </Button>
 
                         <Button variant="outline" className="w-full justify-start bg-transparent">
                           <div className="text-left">
-                            <div className="font-medium">Registry Monitoring</div>
-                            <div className="text-xs text-gray-500">Track system configuration changes</div>
+                            <div className="font-medium">{t('settings.registryMonitoring')}</div>
+                            <div className="text-xs text-gray-500">{t('settings.registryMonitoringDesc')}</div>
                           </div>
                         </Button>
 
                         <Button variant="outline" className="w-full justify-start bg-transparent">
                           <div className="text-left">
-                            <div className="font-medium">Service Management</div>
-                            <div className="text-xs text-gray-500">Monitor and control Windows services</div>
+                            <div className="font-medium">{t('settings.serviceManagement')}</div>
+                            <div className="text-xs text-gray-500">{t('settings.serviceManagementDesc')}</div>
                           </div>
                         </Button>
                       </div>
@@ -1871,35 +1876,35 @@ export default function App() {
 
               {/* About & Support Section */}
               <div>
-                <h2 className="text-xl font-semibold mb-4 text-gray-700">About & Support</h2>
+                <h2 className="text-xl font-semibold mb-4 text-gray-700">{t('settings.aboutSupport')}</h2>
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                   {/* Application Info */}
                   <Card className="bg-white border-gray-200 shadow-sm">
                     <CardHeader>
-                      <CardTitle className="text-lg font-semibold text-gray-800">Application Information</CardTitle>
+                      <CardTitle className="text-lg font-semibold text-gray-800">{t('settings.applicationInformation')}</CardTitle>
                     </CardHeader>
                     <CardContent className="space-y-4">
                       <div className="space-y-3">
                         <div className="flex justify-between">
-                          <span className="text-sm text-gray-600">Version</span>
+                          <span className="text-sm text-gray-600">{t('settings.version')}</span>
                           <span className="text-sm font-medium">2.1.4</span>
                         </div>
                         <div className="flex justify-between">
-                          <span className="text-sm text-gray-600">Build Date</span>
+                          <span className="text-sm text-gray-600">{t('settings.buildDate')}</span>
                           <span className="text-sm font-medium">2024-01-15</span>
                         </div>
                         <div className="flex justify-between">
-                          <span className="text-sm text-gray-600">License</span>
+                          <span className="text-sm text-gray-600">{t('settings.license')}</span>
                           <span className="text-sm font-medium">MIT License</span>
                         </div>
                         <div className="flex justify-between">
-                          <span className="text-sm text-gray-600">Platform</span>
+                          <span className="text-sm text-gray-600">{t('settings.platform')}</span>
                           <span className="text-sm font-medium">Windows 11</span>
                         </div>
                       </div>
 
                       <div className="pt-4 border-t">
-                        <Button className="w-full bg-blue-500 hover:bg-blue-600">Check for Updates</Button>
+                        <Button className="w-full bg-blue-500 hover:bg-blue-600">{t('settings.checkForUpdates')}</Button>
                       </div>
                     </CardContent>
                   </Card>
@@ -1907,35 +1912,35 @@ export default function App() {
                   {/* Support & Help */}
                   <Card className="bg-white border-gray-200 shadow-sm">
                     <CardHeader>
-                      <CardTitle className="text-lg font-semibold text-gray-800">Support & Help</CardTitle>
+                      <CardTitle className="text-lg font-semibold text-gray-800">{t('settings.supportHelp')}</CardTitle>
                     </CardHeader>
                     <CardContent className="space-y-4">
                       <div className="space-y-3">
                         <Button variant="outline" className="w-full justify-start bg-transparent">
                           <div className="text-left">
-                            <div className="font-medium">User Manual</div>
-                            <div className="text-xs text-gray-500">Complete guide and documentation</div>
+                            <div className="font-medium">{t('settings.userManual')}</div>
+                            <div className="text-xs text-gray-500">{t('settings.userManualDesc')}</div>
                           </div>
                         </Button>
 
                         <Button variant="outline" className="w-full justify-start bg-transparent">
                           <div className="text-left">
-                            <div className="font-medium">Keyboard Shortcuts</div>
-                            <div className="text-xs text-gray-500">View all available hotkeys</div>
+                            <div className="font-medium">{t('settings.keyboardShortcuts')}</div>
+                            <div className="text-xs text-gray-500">{t('settings.keyboardShortcutsDesc')}</div>
                           </div>
                         </Button>
 
                         <Button variant="outline" className="w-full justify-start bg-transparent">
                           <div className="text-left">
-                            <div className="font-medium">Report Issue</div>
-                            <div className="text-xs text-gray-500">Submit bug reports and feedback</div>
+                            <div className="font-medium">{t('settings.reportIssue')}</div>
+                            <div className="text-xs text-gray-500">{t('settings.reportIssueDesc')}</div>
                           </div>
                         </Button>
 
                         <Button variant="outline" className="w-full justify-start bg-transparent">
                           <div className="text-left">
-                            <div className="font-medium">Reset to Defaults</div>
-                            <div className="text-xs text-gray-500">Restore all settings to default values</div>
+                            <div className="font-medium">{t('settings.resetToDefaults')}</div>
+                            <div className="text-xs text-gray-500">{t('settings.resetToDefaultsDesc')}</div>
                           </div>
                         </Button>
                       </div>
