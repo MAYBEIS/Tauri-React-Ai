@@ -26,7 +26,7 @@ import {
   CheckCircle,
   Bug,
 } from "lucide-react"
-import { useState, useEffect, ChangeEvent } from "react"
+import { useState, useEffect, ChangeEvent, useCallback, useRef, memo } from "react"
 import reactLogo from "./assets/react.svg"
 import SystemMonitorAPI, { 
   SystemInfo, 
@@ -41,8 +41,8 @@ import TestPage from "@/components/TestPage"
 import "./App.css"
 import { useTranslation } from 'react-i18next'
 
-// Simple line chart component
-function MiniChart({ data }: { data: number[] }) {
+// Simple line chart component - 使用 memo 避免不必要的重新渲染
+const MiniChart = memo(({ data }: { data: number[] }) => {
   const max = Math.max(...data)
   const min = Math.min(...data)
   const range = max - min || 1
@@ -60,9 +60,9 @@ function MiniChart({ data }: { data: number[] }) {
       <polyline fill="none" stroke="#3b82f6" strokeWidth="2" points={points} className="drop-shadow-sm" />
     </svg>
   )
-}
+})
 
-function AudioLevelMeter({ level, label }: { level: number; label: string }) {
+const AudioLevelMeter = memo(({ level, label }: { level: number; label: string }) => {
   const getBarColor = (index: number, level: number) => {
     const normalizedLevel = level / 100
     const barThreshold = index / 20
@@ -86,7 +86,7 @@ function AudioLevelMeter({ level, label }: { level: number; label: string }) {
       </div>
     </div>
   )
-}
+})
 
 function HotkeyCapture({ onCapture, currentHotkey }: { onCapture: (hotkey: string) => void; currentHotkey: string }) {
   const [isCapturing, setIsCapturing] = useState(false)
@@ -212,10 +212,28 @@ export default function App() {
   const [memoryHistory, setMemoryHistory] = useState<number[]>([55, 60, 65, 58, 62, 70, 65, 45, 55, 60, 58])
   const [diskHistory, setDiskHistory] = useState<number[]>([10, 15, 12, 18, 14, 16, 12, 15, 20, 25, 15])
 
+  // 使用防抖函数减少频繁更新
+  const debounce = useCallback((func: Function, wait: number) => {
+    const timeout = useRef<NodeJS.Timeout | null>(null);
+    
+    return (...args: any[]) => {
+      if (timeout.current) {
+        clearTimeout(timeout.current);
+      }
+      
+      timeout.current = setTimeout(() => {
+        func(...args);
+      }, wait);
+    };
+  }, []);
+
   // 获取系统数据
-  const fetchSystemData = async () => {
+  const fetchSystemData = useCallback(async () => {
     try {
-      setLoading(true)
+      // 只在第一次加载时设置 loading 状态
+      if (systemInfo === null) {
+        setLoading(true)
+      }
       setError(null)
 
       // 并行获取所有系统数据
@@ -239,14 +257,15 @@ export default function App() {
         SystemMonitorAPI.getProcesses()
       ])
 
-      setSystemInfo(systemInfoData)
-      setCpuInfo(cpuInfoData)
-      setMemoryInfo(memoryInfoData)
-      setDiskInfo(diskInfoData)
-      setNetworkStatus(networkStatusData)
-      setAudioDevices(audioDevicesData)
-      setUptime(uptimeData)
-      setProcesses(processesData)
+      // 使用函数式更新，避免不必要的重新渲染
+      setSystemInfo(prev => JSON.stringify(prev) !== JSON.stringify(systemInfoData) ? systemInfoData : prev)
+      setCpuInfo(prev => JSON.stringify(prev) !== JSON.stringify(cpuInfoData) ? cpuInfoData : prev)
+      setMemoryInfo(prev => JSON.stringify(prev) !== JSON.stringify(memoryInfoData) ? memoryInfoData : prev)
+      setDiskInfo(prev => JSON.stringify(prev) !== JSON.stringify(diskInfoData) ? diskInfoData : prev)
+      setNetworkStatus(prev => JSON.stringify(prev) !== JSON.stringify(networkStatusData) ? networkStatusData : prev)
+      setAudioDevices(prev => JSON.stringify(prev) !== JSON.stringify(audioDevicesData) ? audioDevicesData : prev)
+      setUptime(prev => prev !== uptimeData ? uptimeData : prev)
+      setProcesses(prev => JSON.stringify(prev) !== JSON.stringify(processesData) ? processesData : prev)
 
       // 更新历史数据
       setCpuHistory(prev => [...prev.slice(1), cpuInfoData.usage])
@@ -261,7 +280,10 @@ export default function App() {
       setError("Failed to fetch system data. Please try again.")
       setLoading(false)
     }
-  }
+  }, [systemInfo])
+
+  // 使用防抖包装的 fetchSystemData
+  const debouncedFetchSystemData = debounce(fetchSystemData, 200)
 
   // 初始化获取数据
   useEffect(() => {
@@ -272,27 +294,34 @@ export default function App() {
   useEffect(() => {
     const interval = setInterval(() => {
       if (currentPage === "performance") {
-        fetchSystemData()
+        debouncedFetchSystemData()
       }
     }, updateFrequency[0])
 
     return () => clearInterval(interval)
-  }, [currentPage, updateFrequency])
+  }, [currentPage, updateFrequency[0], debouncedFetchSystemData])
 
   // 模拟音频和网络数据变化
   useEffect(() => {
     const interval = setInterval(() => {
       if (micEnabled) {
-        setMicLevel(Math.floor(Math.random() * 60) + 20)
+        setMicLevel(prev => prev !== 0 ? Math.floor(Math.random() * 60) + 20 : 0)
       } else {
         setMicLevel(0)
       }
-      setOutputLevel(Math.floor(Math.random() * 40) + 30)
+      setOutputLevel(prev => {
+        const newValue = Math.floor(Math.random() * 40) + 30;
+        return Math.abs(prev - newValue) > 5 ? newValue : prev;
+      })
 
       // 更新网络使用情况
-      setNetworkUsage({
-        sent: Math.random() * 5 + 1,
-        received: Math.random() * 20 + 5,
+      setNetworkUsage(prev => {
+        const newSent = Math.random() * 5 + 1;
+        const newReceived = Math.random() * 20 + 5;
+        return {
+          sent: Math.abs(prev.sent - newSent) > 0.5 ? newSent : prev.sent,
+          received: Math.abs(prev.received - newReceived) > 1 ? newReceived : prev.received,
+        };
       })
     }, 500)
 
@@ -318,7 +347,7 @@ export default function App() {
     { hotkey: "Ctrl + S", action: "Save", source: "Applications", enabled: true },
   ]
 
-  const handlePing = async () => {
+  const handlePing = useCallback(async () => {
     setPingResult("Pinging...")
     try {
       const result = await SystemMonitorAPI.pingHost(pingTarget)
@@ -326,27 +355,29 @@ export default function App() {
     } catch (err) {
       setPingResult(`Ping failed: ${err}`)
     }
-  }
+  }, [pingTarget])
 
-  const addDnsServer = () => {
-    setDnsServers([...dnsServers, ""])
-  }
+  const addDnsServer = useCallback(() => {
+    setDnsServers(prev => [...prev, ""])
+  }, [])
 
-  const updateDnsServer = (index: number, value: string) => {
-    const newServers = [...dnsServers]
-    newServers[index] = value
-    setDnsServers(newServers)
-  }
+  const updateDnsServer = useCallback((index: number, value: string) => {
+    setDnsServers(prev => {
+      const newServers = [...prev]
+      newServers[index] = value
+      return newServers
+    })
+  }, [])
 
-  const removeDnsServer = (index: number) => {
-    setDnsServers(dnsServers.filter((_, i) => i !== index))
-  }
+  const removeDnsServer = useCallback((index: number) => {
+    setDnsServers(prev => prev.filter((_, i) => i !== index))
+  }, [])
 
-  const addCustomHotkey = () => {
+  const addCustomHotkey = useCallback(() => {
     if (newHotkey && newHotkeyAction) {
       const newId = Math.max(...customHotkeys.map((h) => h.id), 0) + 1
-      setCustomHotkeys([
-        ...customHotkeys,
+      setCustomHotkeys(prev => [
+        ...prev,
         {
           id: newId,
           hotkey: newHotkey,
@@ -357,29 +388,29 @@ export default function App() {
       setNewHotkey("")
       setNewHotkeyAction("")
     }
-  }
+  }, [newHotkey, newHotkeyAction, customHotkeys])
 
-  const removeCustomHotkey = (id: number) => {
-    setCustomHotkeys(customHotkeys.filter((h) => h.id !== id))
-  }
+  const removeCustomHotkey = useCallback((id: number) => {
+    setCustomHotkeys(prev => prev.filter((h) => h.id !== id))
+  }, [])
 
-  const toggleHotkey = (id: number) => {
-    setCustomHotkeys(customHotkeys.map((h) => (h.id === id ? { ...h, enabled: !h.enabled } : h)))
-  }
+  const toggleHotkey = useCallback((id: number) => {
+    setCustomHotkeys(prev => prev.map((h) => (h.id === id ? { ...h, enabled: !h.enabled } : h)))
+  }, [])
 
-  const updateHotkey = (id: number, hotkey: string, action: string) => {
-    setCustomHotkeys(customHotkeys.map((h) => (h.id === id ? { ...h, hotkey, action } : h)))
+  const updateHotkey = useCallback((id: number, hotkey: string, action: string) => {
+    setCustomHotkeys(prev => prev.map((h) => (h.id === id ? { ...h, hotkey, action } : h)))
     setEditingHotkey(null)
-  }
+  }, [])
 
-  const checkHotkeyConflict = (hotkey: string) => {
+  const checkHotkeyConflict = useCallback((hotkey: string) => {
     const allHotkeys = [
       ...systemHotkeys.map((h) => h.hotkey),
       ...applicationHotkeys.map((h) => h.hotkey),
       ...customHotkeys.map((h) => h.hotkey),
     ]
     return allHotkeys.filter((h) => h === hotkey).length > 1
-  }
+  }, [customHotkeys])
 
   // 格式化字节数
   const formatBytes = (bytes: number, decimals = 2) => {
