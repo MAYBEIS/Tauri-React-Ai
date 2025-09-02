@@ -24,10 +24,20 @@ import {
   Edit3,
   AlertTriangle,
   CheckCircle,
+  Bug,
 } from "lucide-react"
 import { useState, useEffect, ChangeEvent } from "react"
 import reactLogo from "./assets/react.svg"
-import { invoke } from "@tauri-apps/api/core"
+import SystemMonitorAPI, { 
+  SystemInfo, 
+  CpuInfo, 
+  MemoryInfo, 
+  DiskInfo, 
+  NetworkStatus, 
+  AudioDevice,
+  ProcessInfo 
+} from "@/lib/api"
+import TestPage from "@/components/TestPage"
 import "./App.css"
 import { useTranslation } from 'react-i18next'
 
@@ -185,6 +195,110 @@ export default function App() {
   const [temperatureUnit, setTemperatureUnit] = useState("Celsius")
   const [dataRetention, setDataRetention] = useState([7])
 
+  // 系统数据状态
+  const [systemInfo, setSystemInfo] = useState<SystemInfo | null>(null)
+  const [cpuInfo, setCpuInfo] = useState<CpuInfo | null>(null)
+  const [memoryInfo, setMemoryInfo] = useState<MemoryInfo | null>(null)
+  const [diskInfo, setDiskInfo] = useState<DiskInfo[]>([])
+  const [networkStatus, setNetworkStatus] = useState<NetworkStatus | null>(null)
+  const [audioDevices, setAudioDevices] = useState<AudioDevice[]>([])
+  const [uptime, setUptime] = useState<number>(0)
+  const [processes, setProcesses] = useState<ProcessInfo[]>([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+
+  // 历史数据
+  const [cpuHistory, setCpuHistory] = useState<number[]>([20, 25, 30, 22, 28, 35, 25, 30, 45, 35, 25])
+  const [memoryHistory, setMemoryHistory] = useState<number[]>([55, 60, 65, 58, 62, 70, 65, 45, 55, 60, 58])
+  const [diskHistory, setDiskHistory] = useState<number[]>([10, 15, 12, 18, 14, 16, 12, 15, 20, 25, 15])
+
+  // 获取系统数据
+  const fetchSystemData = async () => {
+    try {
+      setLoading(true)
+      setError(null)
+
+      // 并行获取所有系统数据
+      const [
+        systemInfoData,
+        cpuInfoData,
+        memoryInfoData,
+        diskInfoData,
+        networkStatusData,
+        audioDevicesData,
+        uptimeData,
+        processesData
+      ] = await Promise.all([
+        SystemMonitorAPI.getSystemInfo(),
+        SystemMonitorAPI.getCpuInfo(),
+        SystemMonitorAPI.getMemoryInfo(),
+        SystemMonitorAPI.getDiskInfo(),
+        SystemMonitorAPI.getNetworkStatus(),
+        SystemMonitorAPI.getAudioDevices(),
+        SystemMonitorAPI.getUptime(),
+        SystemMonitorAPI.getProcesses()
+      ])
+
+      setSystemInfo(systemInfoData)
+      setCpuInfo(cpuInfoData)
+      setMemoryInfo(memoryInfoData)
+      setDiskInfo(diskInfoData)
+      setNetworkStatus(networkStatusData)
+      setAudioDevices(audioDevicesData)
+      setUptime(uptimeData)
+      setProcesses(processesData)
+
+      // 更新历史数据
+      setCpuHistory(prev => [...prev.slice(1), cpuInfoData.usage])
+      setMemoryHistory(prev => [...prev.slice(1), memoryInfoData.usage_percent])
+      if (diskInfoData.length > 0) {
+        setDiskHistory(prev => [...prev.slice(1), diskInfoData[0].usage_percent])
+      }
+
+      setLoading(false)
+    } catch (err) {
+      console.error("Failed to fetch system data:", err)
+      setError("Failed to fetch system data. Please try again.")
+      setLoading(false)
+    }
+  }
+
+  // 初始化获取数据
+  useEffect(() => {
+    fetchSystemData()
+  }, [])
+
+  // 定时刷新数据
+  useEffect(() => {
+    const interval = setInterval(() => {
+      if (currentPage === "performance") {
+        fetchSystemData()
+      }
+    }, updateFrequency[0])
+
+    return () => clearInterval(interval)
+  }, [currentPage, updateFrequency])
+
+  // 模拟音频和网络数据变化
+  useEffect(() => {
+    const interval = setInterval(() => {
+      if (micEnabled) {
+        setMicLevel(Math.floor(Math.random() * 60) + 20)
+      } else {
+        setMicLevel(0)
+      }
+      setOutputLevel(Math.floor(Math.random() * 40) + 30)
+
+      // 更新网络使用情况
+      setNetworkUsage({
+        sent: Math.random() * 5 + 1,
+        received: Math.random() * 20 + 5,
+      })
+    }, 500)
+
+    return () => clearInterval(interval)
+  }, [micEnabled])
+
   const systemHotkeys = [
     { hotkey: "Ctrl + C", action: "Copy", source: "System", enabled: true },
     { hotkey: "Ctrl + V", action: "Paste", source: "System", enabled: true },
@@ -204,47 +318,14 @@ export default function App() {
     { hotkey: "Ctrl + S", action: "Save", source: "Applications", enabled: true },
   ]
 
-  useEffect(() => {
-    const interval = setInterval(() => {
-      if (micEnabled) {
-        setMicLevel(Math.floor(Math.random() * 60) + 20)
-      } else {
-        setMicLevel(0)
-      }
-      setOutputLevel(Math.floor(Math.random() * 40) + 30)
-
-      // Update network usage
-      setNetworkUsage({
-        sent: Math.random() * 5 + 1,
-        received: Math.random() * 20 + 5,
-      })
-    }, 500)
-
-    return () => clearInterval(interval)
-  }, [micEnabled])
-
-  // Sample data for charts
-  const cpuData = [20, 25, 30, 22, 28, 35, 25, 30, 45, 35, 25]
-  const gpuData = [35, 40, 45, 38, 42, 35, 30, 25, 35, 40, 38]
-  const ramData = [55, 60, 65, 58, 62, 70, 65, 45, 55, 60, 58]
-  const diskData = [10, 15, 12, 18, 14, 16, 12, 15, 20, 25, 15]
-
-  const navigationItems = [
-    { id: "performance", label: t('navigation.performance'), icon: BarChart3 },
-    { id: "network", label: t('navigation.network'), icon: Wifi },
-    { id: "audio", label: t('navigation.audio'), icon: Volume2 },
-    { id: "hotkeys", label: t('navigation.hotkeys'), icon: Keyboard },
-    { id: "disk", label: t('navigation.disk'), icon: Server },
-    { id: "settings", label: t('navigation.settings'), icon: Settings },
-  ]
-
   const handlePing = async () => {
     setPingResult("Pinging...")
-    // Simulate ping request
-    setTimeout(() => {
-      const latency = Math.floor(Math.random() * 100) + 10
-      setPingResult(`Reply from ${pingTarget}: time=${latency}ms TTL=64`)
-    }, 1000)
+    try {
+      const result = await SystemMonitorAPI.pingHost(pingTarget)
+      setPingResult(result)
+    } catch (err) {
+      setPingResult(`Ping failed: ${err}`)
+    }
   }
 
   const addDnsServer = () => {
@@ -298,6 +379,64 @@ export default function App() {
       ...customHotkeys.map((h) => h.hotkey),
     ]
     return allHotkeys.filter((h) => h === hotkey).length > 1
+  }
+
+  // 格式化字节数
+  const formatBytes = (bytes: number, decimals = 2) => {
+    if (bytes === 0) return '0 Bytes'
+    
+    const k = 1024
+    const dm = decimals < 0 ? 0 : decimals
+    const sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB', 'PB', 'EB', 'ZB', 'YB']
+    
+    const i = Math.floor(Math.log(bytes) / Math.log(k))
+    
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(dm)) + ' ' + sizes[i]
+  }
+
+  // 格式化运行时间
+  const formatUptime = (seconds: number) => {
+    const days = Math.floor(seconds / (3600 * 24))
+    const hours = Math.floor((seconds % (3600 * 24)) / 3600)
+    const minutes = Math.floor((seconds % 3600) / 60)
+    
+    return `${days}d ${hours}h ${minutes}m`
+  }
+
+  const navigationItems = [
+    { id: "performance", label: t('navigation.performance'), icon: BarChart3 },
+    { id: "network", label: t('navigation.network'), icon: Wifi },
+    { id: "audio", label: t('navigation.audio'), icon: Volume2 },
+    { id: "hotkeys", label: t('navigation.hotkeys'), icon: Keyboard },
+    { id: "disk", label: t('navigation.disk'), icon: Server },
+    { id: "settings", label: t('navigation.settings'), icon: Settings },
+    { id: "test", label: "IPC Test", icon: Bug },
+  ]
+
+  if (loading && currentPage === "performance") {
+    return (
+      <div className="h-screen bg-gray-50 text-gray-900 overflow-hidden flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mx-auto"></div>
+          <p className="mt-4 text-gray-600">Loading system data...</p>
+        </div>
+      </div>
+    )
+  }
+
+  if (error && currentPage === "performance") {
+    return (
+      <div className="h-screen bg-gray-50 text-gray-900 overflow-hidden flex items-center justify-center">
+        <div className="text-center max-w-md">
+          <div className="text-red-500 text-5xl mb-4">⚠️</div>
+          <h2 className="text-2xl font-bold text-gray-800 mb-2">Error</h2>
+          <p className="text-gray-600 mb-6">{error}</p>
+          <Button onClick={fetchSystemData} className="bg-blue-500 hover:bg-blue-600">
+            Retry
+          </Button>
+        </div>
+      </div>
+    )
   }
 
   return (
@@ -357,9 +496,11 @@ export default function App() {
                       </div>
                     </CardHeader>
                     <CardContent className="px-4 pb-4">
-                      <div className="text-2xl font-bold mb-2 text-gray-800">25%</div>
+                      <div className="text-2xl font-bold mb-2 text-gray-800">
+                        {cpuInfo ? `${cpuInfo.usage.toFixed(1)}%` : 'N/A'}
+                      </div>
                       <div className="h-8">
-                        <MiniChart data={cpuData} />
+                        <MiniChart data={cpuHistory} />
                       </div>
                     </CardContent>
                   </Card>
@@ -378,7 +519,7 @@ export default function App() {
                     <CardContent className="px-4 pb-4">
                       <div className="text-2xl font-bold mb-2 text-gray-800">40%</div>
                       <div className="h-8">
-                        <MiniChart data={gpuData} />
+                        <MiniChart data={[35, 40, 45, 38, 42, 35, 30, 25, 35, 40, 38]} />
                       </div>
                     </CardContent>
                   </Card>
@@ -395,9 +536,11 @@ export default function App() {
                       </div>
                     </CardHeader>
                     <CardContent className="px-4 pb-4">
-                      <div className="text-2xl font-bold mb-2 text-gray-800">60%</div>
+                      <div className="text-2xl font-bold mb-2 text-gray-800">
+                        {memoryInfo ? `${memoryInfo.usage_percent.toFixed(1)}%` : 'N/A'}
+                      </div>
                       <div className="h-8">
-                        <MiniChart data={ramData} />
+                        <MiniChart data={memoryHistory} />
                       </div>
                     </CardContent>
                   </Card>
@@ -414,9 +557,11 @@ export default function App() {
                       </div>
                     </CardHeader>
                     <CardContent className="px-4 pb-4">
-                      <div className="text-2xl font-bold mb-2 text-gray-800">15%</div>
+                      <div className="text-2xl font-bold mb-2 text-gray-800">
+                        {diskInfo.length > 0 ? `${diskInfo[0].usage_percent.toFixed(1)}%` : 'N/A'}
+                      </div>
                       <div className="h-8">
-                        <MiniChart data={diskData} />
+                        <MiniChart data={diskHistory} />
                       </div>
                     </CardContent>
                   </Card>
@@ -462,8 +607,12 @@ export default function App() {
                       <div className="space-y-4">
                         <div>
                           <div className="text-xs text-gray-500 mb-1">Processor</div>
-                          <div className="text-sm font-semibold text-gray-800">Intel i9-12900K</div>
-                          <div className="text-xs text-gray-600">16 Cores, 24 Threads, 3.2GHz</div>
+                          <div className="text-sm font-semibold text-gray-800">
+                            {cpuInfo ? cpuInfo.brand : 'Loading...'}
+                          </div>
+                          <div className="text-xs text-gray-600">
+                            {cpuInfo ? `${cpuInfo.cores} Cores, ${cpuInfo.physical_cores} Threads, ${(cpuInfo.frequency / 1000).toFixed(1)}GHz` : 'Loading...'}
+                          </div>
                         </div>
                         <div>
                           <div className="text-xs text-gray-500 mb-1">Graphics Card</div>
@@ -472,8 +621,12 @@ export default function App() {
                         </div>
                         <div>
                           <div className="text-xs text-gray-500 mb-1">Memory</div>
-                          <div className="text-sm font-semibold text-gray-800">32GB DDR4</div>
-                          <div className="text-xs text-gray-600">3200MHz, Dual Channel</div>
+                          <div className="text-sm font-semibold text-gray-800">
+                            {memoryInfo ? formatBytes(memoryInfo.total) : 'Loading...'}
+                          </div>
+                          <div className="text-xs text-gray-600">
+                            {memoryInfo ? 'DDR4, Dual Channel' : 'Loading...'}
+                          </div>
                         </div>
                       </div>
                     </CardContent>
@@ -485,12 +638,18 @@ export default function App() {
                       <div className="space-y-4">
                         <div>
                           <div className="text-xs text-gray-500 mb-1">Operating System</div>
-                          <div className="text-sm font-semibold text-gray-800">Windows 11 Pro</div>
-                          <div className="text-xs text-gray-600">Build 22000.1, 64-bit</div>
+                          <div className="text-sm font-semibold text-gray-800">
+                            {systemInfo ? `${systemInfo.os_name} ${systemInfo.os_version}` : 'Loading...'}
+                          </div>
+                          <div className="text-xs text-gray-600">
+                            {systemInfo ? `Build ${systemInfo.kernel_version}, 64-bit` : 'Loading...'}
+                          </div>
                         </div>
                         <div>
-                          <div className="text-xs text-gray-500 mb-1">Motherboard</div>
-                          <div className="text-sm font-semibold text-gray-800">ASUS ROG Z690</div>
+                          <div className="text-xs text-gray-500 mb-1">Hostname</div>
+                          <div className="text-sm font-semibold text-gray-800">
+                            {systemInfo ? systemInfo.hostname : 'Loading...'}
+                          </div>
                           <div className="text-xs text-gray-600">BIOS Version 2.1.4</div>
                         </div>
                         <div>
@@ -506,21 +665,43 @@ export default function App() {
                   <Card className="bg-white border-gray-200 shadow-sm">
                     <CardContent className="p-4">
                       <div className="space-y-4">
-                        <div>
-                          <div className="text-xs text-gray-500 mb-1">Primary Drive</div>
-                          <div className="text-sm font-semibold text-gray-800">Samsung 980 PRO 1TB</div>
-                          <div className="text-xs text-gray-600">NVMe SSD, 7000MB/s Read</div>
-                        </div>
-                        <div>
-                          <div className="text-xs text-gray-500 mb-1">Secondary Drive</div>
-                          <div className="text-sm font-semibold text-gray-800">Seagate Barracuda 2TB</div>
-                          <div className="text-xs text-gray-600">7200RPM HDD, SATA III</div>
-                        </div>
-                        <div>
-                          <div className="text-xs text-gray-500 mb-1">Total Storage</div>
-                          <div className="text-sm font-semibold text-gray-800">3TB Available</div>
-                          <div className="text-xs text-gray-600">1.2TB Used (40%)</div>
-                        </div>
+                        {diskInfo.length > 0 ? (
+                          <>
+                            <div>
+                              <div className="text-xs text-gray-500 mb-1">Primary Drive</div>
+                              <div className="text-sm font-semibold text-gray-800">{diskInfo[0].name}</div>
+                              <div className="text-xs text-gray-600">
+                                {formatBytes(diskInfo[0].total_space)}, {diskInfo[0].file_system}
+                              </div>
+                            </div>
+                            {diskInfo.length > 1 && (
+                              <div>
+                                <div className="text-xs text-gray-500 mb-1">Secondary Drive</div>
+                                <div className="text-sm font-semibold text-gray-800">{diskInfo[1].name}</div>
+                                <div className="text-xs text-gray-600">
+                                  {formatBytes(diskInfo[1].total_space)}, {diskInfo[1].file_system}
+                                </div>
+                              </div>
+                            )}
+                            <div>
+                              <div className="text-xs text-gray-500 mb-1">Total Storage</div>
+                              <div className="text-sm font-semibold text-gray-800">
+                                {formatBytes(diskInfo.reduce((sum, disk) => sum + disk.total_space, 0))}
+                              </div>
+                              <div className="text-xs text-gray-600">
+                                {formatBytes(diskInfo.reduce((sum, disk) => sum + disk.used_space, 0))} Used (
+                                {(
+                                  (diskInfo.reduce((sum, disk) => sum + disk.used_space, 0) /
+                                    diskInfo.reduce((sum, disk) => sum + disk.total_space, 0)) *
+                                  100
+                                ).toFixed(0)}
+                                %)
+                              </div>
+                            </div>
+                          </>
+                        ) : (
+                          <div className="text-center text-gray-500">Loading disk information...</div>
+                        )}
                       </div>
                     </CardContent>
                   </Card>
@@ -533,7 +714,9 @@ export default function App() {
                   <Card className="bg-white border-gray-200 shadow-sm">
                     <CardContent className="p-4">
                       <div className="text-xs text-gray-500 mb-1">{t('performance.cpuTemp')}</div>
-                      <div className="text-lg font-bold text-green-600">52°C</div>
+                      <div className="text-lg font-bold text-green-600">
+                        {cpuInfo && cpuInfo.temperature ? `${cpuInfo.temperature}°C` : 'N/A'}
+                      </div>
                       <div className="text-xs text-gray-600">Normal</div>
                     </CardContent>
                   </Card>
@@ -568,7 +751,9 @@ export default function App() {
                   <Card className="bg-white border-gray-200 shadow-sm">
                     <CardContent className="p-4">
                       <div className="text-xs text-gray-500 mb-1">{t('performance.uptime')}</div>
-                      <div className="text-lg font-bold text-gray-800">2d 14h</div>
+                      <div className="text-lg font-bold text-gray-800">
+                        {uptime > 0 ? formatUptime(uptime) : 'N/A'}
+                      </div>
                       <div className="text-xs text-gray-600">Stable</div>
                     </CardContent>
                   </Card>
@@ -595,7 +780,9 @@ export default function App() {
                       </CardTitle>
                     </CardHeader>
                     <CardContent>
-                      <div className="text-2xl font-bold text-green-600 mb-2">Connected</div>
+                      <div className={`text-2xl font-bold mb-2 ${networkStatus?.is_connected ? 'text-green-600' : 'text-red-500'}`}>
+                        {networkStatus?.is_connected ? 'Connected' : 'Disconnected'}
+                      </div>
                       <div className="text-sm text-gray-500">Wi-Fi Network</div>
                     </CardContent>
                   </Card>
@@ -609,7 +796,9 @@ export default function App() {
                       </CardTitle>
                     </CardHeader>
                     <CardContent>
-                      <div className="text-lg font-bold text-gray-800 mb-2">192.168.1.105</div>
+                      <div className="text-lg font-bold text-gray-800 mb-2">
+                        {networkStatus?.local_ip || 'N/A'}
+                      </div>
                       <div className="text-sm text-gray-500">Private Address</div>
                     </CardContent>
                   </Card>
@@ -623,7 +812,9 @@ export default function App() {
                       </CardTitle>
                     </CardHeader>
                     <CardContent>
-                      <div className="text-lg font-bold text-gray-800 mb-2">203.0.113.45</div>
+                      <div className="text-lg font-bold text-gray-800 mb-2">
+                        {networkStatus?.public_ip || 'N/A'}
+                      </div>
                       <div className="text-sm text-gray-500">ISP: Comcast</div>
                     </CardContent>
                   </Card>
@@ -840,7 +1031,7 @@ export default function App() {
                     </CardHeader>
                     <CardContent>
                       <div className="text-2xl font-bold text-gray-800 mb-2">48kHz</div>
-                      <div className="text-sm text-gray-500">16-bit Stereo</div>
+                      <div className="text-sm text-gray-600">16-bit Stereo</div>
                     </CardContent>
                   </Card>
 
@@ -854,7 +1045,7 @@ export default function App() {
                     </CardHeader>
                     <CardContent>
                       <div className="text-2xl font-bold text-gray-800 mb-2">12ms</div>
-                      <div className="text-sm text-gray-500">Low Latency</div>
+                      <div className="text-sm text-gray-600">Low Latency</div>
                     </CardContent>
                   </Card>
                 </div>
@@ -917,10 +1108,13 @@ export default function App() {
                           onChange={(e: ChangeEvent<HTMLSelectElement>) => setSelectedMicDevice(e.target.value)}
                           className="w-full p-2 border border-gray-300 rounded-md text-sm"
                         >
-                          <option>{t('audio.defaultMicrophone')}</option>
-                          <option>{t('audio.usbMicrophone')}</option>
-                          <option>{t('audio.headsetMicrophone')}</option>
-                          <option>{t('audio.builtInMicrophone')}</option>
+                          {audioDevices
+                            .filter(device => device.is_input)
+                            .map(device => (
+                              <option key={device.name} value={device.name}>
+                                {device.name} {device.is_default ? '(Default)' : ''}
+                              </option>
+                            ))}
                         </select>
                       </div>
                     </CardContent>
@@ -953,10 +1147,13 @@ export default function App() {
                           onChange={(e: ChangeEvent<HTMLSelectElement>) => setSelectedOutputDevice(e.target.value)}
                           className="w-full p-2 border border-gray-300 rounded-md text-sm"
                         >
-                          <option>{t('audio.defaultSpeakers')}</option>
-                          <option>{t('audio.headphones')}</option>
-                          <option>{t('audio.usbSpeakers')}</option>
-                          <option>{t('audio.bluetoothHeadphones')}</option>
+                          {audioDevices
+                            .filter(device => device.is_output)
+                            .map(device => (
+                              <option key={device.name} value={device.name}>
+                                {device.name} {device.is_default ? '(Default)' : ''}
+                              </option>
+                            ))}
                         </select>
                       </div>
 
@@ -1240,28 +1437,34 @@ export default function App() {
                   <Card className="bg-white border-gray-200 shadow-sm">
                     <CardContent className="p-4">
                       <div className="text-xs text-gray-500 mb-1">{t('disk.totalStorage')}</div>
-                      <div className="text-2xl font-bold text-gray-800">3TB</div>
+                      <div className="text-2xl font-bold text-gray-800">
+                        {diskInfo.length > 0 ? formatBytes(diskInfo.reduce((sum, disk) => sum + disk.total_space, 0)) : 'N/A'}
+                      </div>
                       <div className="text-xs text-gray-600">{t('disk.availableSpace')}</div>
                     </CardContent>
                   </Card>
                   <Card className="bg-white border-gray-200 shadow-sm">
                     <CardContent className="p-4">
                       <div className="text-xs text-gray-500 mb-1">{t('disk.usedSpace')}</div>
-                      <div className="text-2xl font-bold text-blue-600">1.2TB</div>
+                      <div className="text-2xl font-bold text-blue-600">
+                        {diskInfo.length > 0 ? formatBytes(diskInfo.reduce((sum, disk) => sum + disk.used_space, 0)) : 'N/A'}
+                      </div>
                       <div className="text-xs text-gray-600">{t('disk.utilized')}</div>
                     </CardContent>
                   </Card>
                   <Card className="bg-white border-gray-200 shadow-sm">
                     <CardContent className="p-4">
                       <div className="text-xs text-gray-500 mb-1">{t('disk.freeSpace')}</div>
-                      <div className="text-2xl font-bold text-green-600">1.8TB</div>
+                      <div className="text-2xl font-bold text-green-600">
+                        {diskInfo.length > 0 ? formatBytes(diskInfo.reduce((sum, disk) => sum + disk.available_space, 0)) : 'N/A'}
+                      </div>
                       <div className="text-xs text-gray-600">{t('disk.available')}</div>
                     </CardContent>
                   </Card>
                   <Card className="bg-white border-gray-200 shadow-sm">
                     <CardContent className="p-4">
                       <div className="text-xs text-gray-500 mb-1">{t('disk.activeDrives')}</div>
-                      <div className="text-2xl font-bold text-gray-800">3</div>
+                      <div className="text-2xl font-bold text-gray-800">{diskInfo.length}</div>
                       <div className="text-xs text-gray-600">{t('disk.allHealthy')}</div>
                     </CardContent>
                   </Card>
@@ -1272,177 +1475,75 @@ export default function App() {
               <div className="mb-6">
                 <h2 className="text-xl font-semibold mb-4 text-gray-700">{t('disk.driveDetails')}</h2>
                 <div className="space-y-4">
-                  {/* Drive C: - Primary SSD */}
-                  <Card className="bg-white border-gray-200 shadow-sm">
-                    <CardContent className="p-6">
-                      <div className="flex items-center justify-between mb-4">
-                        <div className="flex items-center gap-4">
-                          <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
-                            <Server className="w-6 h-6 text-blue-600" />
+                  {diskInfo.map((disk, index) => (
+                    <Card key={index} className="bg-white border-gray-200 shadow-sm">
+                      <CardContent className="p-6">
+                        <div className="flex items-center justify-between mb-4">
+                          <div className="flex items-center gap-4">
+                            <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
+                              <Server className="w-6 h-6 text-blue-600" />
+                            </div>
+                            <div>
+                              <div className="text-lg font-semibold text-gray-800">{disk.name}</div>
+                              <div className="text-sm text-gray-600">{disk.mount_point}</div>
+                            </div>
+                          </div>
+                          <div className="text-right">
+                            <div className="text-sm text-gray-500">Health Status</div>
+                            <div className="text-lg font-semibold text-green-600">Excellent</div>
+                          </div>
+                        </div>
+
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+                          <div>
+                            <div className="text-xs text-gray-500 mb-1">{t('disk.capacity')}</div>
+                            <div className="text-sm font-semibold text-gray-800">{formatBytes(disk.total_space)}</div>
                           </div>
                           <div>
-                            <div className="text-lg font-semibold text-gray-800">Drive C: (System)</div>
-                            <div className="text-sm text-gray-600">Samsung 980 PRO 1TB NVMe SSD</div>
-                          </div>
-                        </div>
-                        <div className="text-right">
-                          <div className="text-sm text-gray-500">Health Status</div>
-                          <div className="text-lg font-semibold text-green-600">Excellent</div>
-                        </div>
-                      </div>
-
-                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
-                        <div>
-                          <div className="text-xs text-gray-500 mb-1">{t('disk.capacity')}</div>
-                          <div className="text-sm font-semibold text-gray-800">1TB (931GB)</div>
-                        </div>
-                        <div>
-                          <div className="text-xs text-gray-500 mb-1">{t('disk.usedSpace')}</div>
-                          <div className="text-sm font-semibold text-gray-800">650GB (70%)</div>
-                        </div>
-                        <div>
-                          <div className="text-xs text-gray-500 mb-1">{t('disk.freeSpace')}</div>
-                          <div className="text-sm font-semibold text-gray-800">281GB (30%)</div>
-                        </div>
-                      </div>
-
-                      {/* Usage Bar */}
-                      <div className="mb-4">
-                        <div className="flex justify-between text-xs text-gray-500 mb-1">
-                          <span>{t('disk.diskUsage')}</span>
-                          <span>70%</span>
-                        </div>
-                        <div className="w-full bg-gray-200 rounded-full h-2">
-                          <div className="bg-blue-600 h-2 rounded-full" style={{ width: "70%" }}></div>
-                        </div>
-                      </div>
-
-                      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-xs">
-                        <div>
-                          <div className="text-gray-500">{t('disk.interface')}</div>
-                          <div className="font-medium">NVMe PCIe 4.0</div>
-                        </div>
-                        <div>
-                          <div className="text-gray-500">{t('disk.readSpeed')}</div>
-                          <div className="font-medium">7,000 MB/s</div>
-                        </div>
-                        <div>
-                          <div className="text-gray-500">{t('disk.writeSpeed')}</div>
-                          <div className="font-medium">5,100 MB/s</div>
-                        </div>
-                        <div>
-                          <div className="text-gray-500">{t('disk.temperature')}</div>
-                          <div className="font-medium text-green-600">42°C</div>
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-
-                  {/* Drive D: - Secondary HDD */}
-                  <Card className="bg-white border-gray-200 shadow-sm">
-                    <CardContent className="p-6">
-                      <div className="flex items-center justify-between mb-4">
-                        <div className="flex items-center gap-4">
-                          <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center">
-                            <Server className="w-6 h-6 text-green-600" />
+                            <div className="text-xs text-gray-500 mb-1">{t('disk.usedSpace')}</div>
+                            <div className="text-sm font-semibold text-gray-800">{formatBytes(disk.used_space)} ({disk.usage_percent.toFixed(1)}%)</div>
                           </div>
                           <div>
-                            <div className="text-lg font-semibold text-gray-800">Drive D: (Storage)</div>
-                            <div className="text-sm text-gray-600">Seagate Barracuda 2TB HDD</div>
+                            <div className="text-xs text-gray-500 mb-1">{t('disk.freeSpace')}</div>
+                            <div className="text-sm font-semibold text-gray-800">{formatBytes(disk.available_space)} ({(100 - disk.usage_percent).toFixed(1)}%)</div>
                           </div>
                         </div>
-                        <div className="text-right">
-                          <div className="text-sm text-gray-500">Health Status</div>
-                          <div className="text-lg font-semibold text-green-600">Good</div>
-                        </div>
-                      </div>
 
-                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
-                        <div>
-                          <div className="text-xs text-gray-500 mb-1">{t('disk.capacity')}</div>
-                          <div className="text-sm font-semibold text-gray-800">2TB (1.86TB)</div>
+                        {/* Usage Bar */}
+                        <div className="mb-4">
+                          <div className="flex justify-between text-xs text-gray-500 mb-1">
+                            <span>{t('disk.diskUsage')}</span>
+                            <span>{disk.usage_percent.toFixed(1)}%</span>
+                          </div>
+                          <div className="w-full bg-gray-200 rounded-full h-2">
+                            <div 
+                              className="bg-blue-600 h-2 rounded-full" 
+                              style={{ width: `${disk.usage_percent}%` }}
+                            ></div>
+                          </div>
                         </div>
-                        <div>
-                          <div className="text-xs text-gray-500 mb-1">{t('disk.usedSpace')}</div>
-                          <div className="text-sm font-semibold text-gray-800">580GB (30%)</div>
-                        </div>
-                        <div>
-                          <div className="text-xs text-gray-500 mb-1">{t('disk.freeSpace')}</div>
-                          <div className="text-sm font-semibold text-gray-800">1.28TB (70%)</div>
-                        </div>
-                      </div>
 
-                      {/* Usage Bar */}
-                      <div className="mb-4">
-                        <div className="flex justify-between text-xs text-gray-500 mb-1">
-                          <span>{t('disk.diskUsage')}</span>
-                          <span>30%</span>
-                        </div>
-                        <div className="w-full bg-gray-200 rounded-full h-2">
-                          <div className="bg-green-600 h-2 rounded-full" style={{ width: "30%" }}></div>
-                        </div>
-                      </div>
-
-                      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-xs">
-                        <div>
-                          <div className="text-gray-500">{t('disk.interface')}</div>
-                          <div className="font-medium">SATA III</div>
-                        </div>
-                        <div>
-                          <div className="text-gray-500">{t('disk.rpm')}</div>
-                          <div className="font-medium">7,200 RPM</div>
-                        </div>
-                        <div>
-                          <div className="text-gray-500">{t('disk.cache')}</div>
-                          <div className="font-medium">256MB</div>
-                        </div>
-                        <div>
-                          <div className="text-gray-500">{t('disk.temperature')}</div>
-                          <div className="font-medium text-green-600">38°C</div>
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-
-                  {/* Drive E: - External USB */}
-                  <Card className="bg-white border-gray-200 shadow-sm">
-                    <CardContent className="p-6">
-                      <div className="flex items-center justify-between mb-4">
-                        <div className="flex items-center gap-4">
-                          <div className="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center">
-                            <Server className="w-6 h-6 text-purple-600" />
+                        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-xs">
+                          <div>
+                            <div className="text-gray-500">{t('disk.interface')}</div>
+                            <div className="font-medium">{disk.file_system}</div>
                           </div>
                           <div>
-                            <div className="text-lg font-semibold text-gray-800">Drive E: (External)</div>
-                            <div className="text-sm text-gray-600">SanDisk Extreme Portable 1TB</div>
+                            <div className="text-gray-500">{t('disk.readSpeed')}</div>
+                            <div className="font-medium">7,000 MB/s</div>
+                          </div>
+                          <div>
+                            <div className="text-gray-500">{t('disk.writeSpeed')}</div>
+                            <div className="font-medium">5,100 MB/s</div>
+                          </div>
+                          <div>
+                            <div className="text-gray-500">{t('disk.temperature')}</div>
+                            <div className="font-medium text-green-600">42°C</div>
                           </div>
                         </div>
-                        <div className="text-right">
-                          <div className="text-sm text-gray-500">Health Status</div>
-                          <div className="text-lg font-semibold text-green-600">Excellent</div>
-                        </div>
-                      </div>
-
-                      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-xs">
-                        <div>
-                          <div className="text-gray-500">{t('disk.interface')}</div>
-                          <div className="font-medium">USB 3.2</div>
-                        </div>
-                        <div>
-                          <div className="text-gray-500">{t('disk.readSpeed')}</div>
-                          <div className="font-medium">1,050 MB/s</div>
-                        </div>
-                        <div>
-                          <div className="text-gray-500">{t('disk.writeSpeed')}</div>
-                          <div className="font-medium">1,000 MB/s</div>
-                        </div>
-                        <div>
-                          <div className="text-gray-500">{t('disk.status')}</div>
-                          <div className="font-medium text-blue-600">{t('disk.removable')}</div>
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
+                      </CardContent>
+                    </Card>
+                  ))}
                 </div>
               </div>
 
@@ -1482,7 +1583,7 @@ export default function App() {
                       <div className="pt-4">
                         <div className="text-xs text-gray-500 mb-2">{t('disk.diskActivity')}</div>
                         <div className="h-16">
-                          <MiniChart data={diskData} />
+                          <MiniChart data={diskHistory} />
                         </div>
                       </div>
                     </CardContent>
@@ -1899,7 +2000,9 @@ export default function App() {
                         </div>
                         <div className="flex justify-between">
                           <span className="text-sm text-gray-600">{t('settings.platform')}</span>
-                          <span className="text-sm font-medium">Windows 11</span>
+                          <span className="text-sm font-medium">
+                            {systemInfo ? `${systemInfo.os_name} ${systemInfo.os_version}` : 'Loading...'}
+                          </span>
                         </div>
                       </div>
 
@@ -1951,13 +2054,17 @@ export default function App() {
             </>
           )}
 
+          {/* Test Page */}
+          {currentPage === "test" && <TestPage />}
+
           {/* Placeholder for other pages */}
           {currentPage !== "performance" &&
             currentPage !== "network" &&
             currentPage !== "audio" &&
             currentPage !== "hotkeys" &&
             currentPage !== "disk" &&
-            currentPage !== "settings" && (
+            currentPage !== "settings" &&
+            currentPage !== "test" && (
               <div className="flex items-center justify-center h-96">
                 <div className="text-center">
                   <div className="text-6xl mb-4">🚧</div>
