@@ -1,10 +1,7 @@
-# Tauri + React + TypeScript + AI
+# Tauri + React + TypeScript + AI (开发中,暂未实现)
 
 一个基于 Tauri 和 React 构建的现代化系统监控应用程序，集成了 AI 功能和多语言支持。
-
 ![](img/Snipaste_2025-09-02_18-20-53.png)
-
-
 
 ## 功能特性
 
