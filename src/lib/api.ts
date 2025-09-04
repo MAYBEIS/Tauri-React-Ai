@@ -2,7 +2,7 @@
  * @Author: Maybe 1913093102@qq.com
  * @Date: 2025-09-02 17:07:48
  * @LastEditors: Maybe 1913093102@qq.com
- * @LastEditTime: 2025-09-02 19:23:45
+ * @LastEditTime: 2025-09-04 11:42:40
  * @FilePath: \Tauri-React-Ai\src\lib\api.ts
  * @Description: API服务层，封装所有IPC调用
  */
@@ -76,6 +76,17 @@ export interface AudioDevice {
   is_muted: boolean;
 }
 
+// GPU信息类型
+export interface GpuInfo {
+  name: string;
+  vendor: string;
+  vram_total: number;
+  vram_used: number;
+  vram_free: number;
+  usage_percent: number;
+  temperature?: number;
+}
+
 // 进程信息类型
 export interface ProcessInfo {
   pid: string;
@@ -136,6 +147,11 @@ export class SystemMonitorAPI {
   // 获取进程列表
   static async getProcesses(): Promise<ProcessInfo[]> {
     return await invoke('get_processes');
+  }
+
+  // 获取GPU信息
+  static async getGpuInfo(): Promise<GpuInfo[]> {
+    return await invoke('get_gpu_info');
   }
 }
 

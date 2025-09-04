@@ -28,14 +28,15 @@ import {
 } from "lucide-react"
 import { useState, useEffect, ChangeEvent, useCallback, useRef, memo } from "react"
 import reactLogo from "./assets/react.svg"
-import SystemMonitorAPI, { 
-  SystemInfo, 
-  CpuInfo, 
-  MemoryInfo, 
-  DiskInfo, 
-  NetworkStatus, 
+import SystemMonitorAPI, {
+  SystemInfo,
+  CpuInfo,
+  MemoryInfo,
+  DiskInfo,
+  NetworkStatus,
   AudioDevice,
-  ProcessInfo 
+  GpuInfo,
+  ProcessInfo
 } from "@/lib/api"
 import TestPage from "@/components/TestPage"
 import "./App.css"
@@ -202,6 +203,7 @@ export default function App() {
   const [diskInfo, setDiskInfo] = useState<DiskInfo[]>([])
   const [networkStatus, setNetworkStatus] = useState<NetworkStatus | null>(null)
   const [audioDevices, setAudioDevices] = useState<AudioDevice[]>([])
+  const [gpuInfo, setGpuInfo] = useState<GpuInfo[]>([])
   const [uptime, setUptime] = useState<number>(0)
   const [processes, setProcesses] = useState<ProcessInfo[]>([])
   const [loading, setLoading] = useState(true)
@@ -244,6 +246,7 @@ export default function App() {
         diskInfoData,
         networkStatusData,
         audioDevicesData,
+        gpuInfoData,
         uptimeData,
         processesData
       ] = await Promise.all([
@@ -253,6 +256,7 @@ export default function App() {
         SystemMonitorAPI.getDiskInfo(),
         SystemMonitorAPI.getNetworkStatus(),
         SystemMonitorAPI.getAudioDevices(),
+        SystemMonitorAPI.getGpuInfo(),
         SystemMonitorAPI.getUptime(),
         SystemMonitorAPI.getProcesses()
       ])
@@ -264,6 +268,7 @@ export default function App() {
       setDiskInfo(prev => JSON.stringify(prev) !== JSON.stringify(diskInfoData) ? diskInfoData : prev)
       setNetworkStatus(prev => JSON.stringify(prev) !== JSON.stringify(networkStatusData) ? networkStatusData : prev)
       setAudioDevices(prev => JSON.stringify(prev) !== JSON.stringify(audioDevicesData) ? audioDevicesData : prev)
+      setGpuInfo(prev => JSON.stringify(prev) !== JSON.stringify(gpuInfoData) ? gpuInfoData : prev)
       setUptime(prev => prev !== uptimeData ? uptimeData : prev)
       setProcesses(prev => JSON.stringify(prev) !== JSON.stringify(processesData) ? processesData : prev)
 
@@ -548,9 +553,11 @@ export default function App() {
                       </div>
                     </CardHeader>
                     <CardContent className="px-4 pb-4">
-                      <div className="text-2xl font-bold mb-2 text-gray-800">40%</div>
+                      <div className="text-2xl font-bold mb-2 text-gray-800">
+                        {gpuInfo.length > 0 ? `${gpuInfo[0].usage_percent.toFixed(1)}%` : 'N/A'}
+                      </div>
                       <div className="h-8">
-                        <MiniChart data={[35, 40, 45, 38, 42, 35, 30, 25, 35, 40, 38]} />
+                        <MiniChart data={gpuInfo.length > 0 ? [35, 40, 45, 38, 42, 35, 30, 25, 35, 40, 38] : []} />
                       </div>
                     </CardContent>
                   </Card>
@@ -647,8 +654,12 @@ export default function App() {
                         </div>
                         <div>
                           <div className="text-xs text-gray-500 mb-1">Graphics Card</div>
-                          <div className="text-sm font-semibold text-gray-800">NVIDIA RTX 3080</div>
-                          <div className="text-xs text-gray-600">10GB GDDR6X, 8704 CUDA Cores</div>
+                          <div className="text-sm font-semibold text-gray-800">
+                            {gpuInfo.length > 0 ? gpuInfo[0].name : 'NVIDIA RTX 3080'}
+                          </div>
+                          <div className="text-xs text-gray-600">
+                            {gpuInfo.length > 0 ? `${(gpuInfo[0].vram_total / (1024 * 1024 * 1024)).toFixed(1)}GB VRAM` : '10GB GDDR6X, 8704 CUDA Cores'}
+                          </div>
                         </div>
                         <div>
                           <div className="text-xs text-gray-500 mb-1">Memory</div>
@@ -754,8 +765,13 @@ export default function App() {
                   <Card className="bg-white border-gray-200 shadow-sm">
                     <CardContent className="p-4">
                       <div className="text-xs text-gray-500 mb-1">{t('performance.gpuTemp')}</div>
-                      <div className="text-lg font-bold text-yellow-600">68°C</div>
-                      <div className="text-xs text-gray-600">Warm</div>
+                      <div className="text-lg font-bold text-yellow-600">
+                        {gpuInfo.length > 0 && gpuInfo[0].temperature ? `${gpuInfo[0].temperature.toFixed(1)}°C` : '68°C'}
+                      </div>
+                      <div className="text-xs text-gray-600">
+                        {gpuInfo.length > 0 && gpuInfo[0].temperature ?
+                          gpuInfo[0].temperature > 70 ? 'Hot' : gpuInfo[0].temperature > 60 ? 'Warm' : 'Normal' : 'Warm'}
+                      </div>
                     </CardContent>
                   </Card>
                   <Card className="bg-white border-gray-200 shadow-sm">

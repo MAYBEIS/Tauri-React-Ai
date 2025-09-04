@@ -81,6 +81,18 @@ pub struct AudioDevice {
     pub is_muted: bool,
 }
 
+// GPU信息结构体
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct GpuInfo {
+    pub name: String,
+    pub vendor: String,
+    pub vram_total: u64,
+    pub vram_used: u64,
+    pub vram_free: u64,
+    pub usage_percent: f32,
+    pub temperature: Option<f32>,
+}
+
 // 系统状态结构体
 pub struct SystemState {
     pub sys: System,
@@ -91,6 +103,12 @@ impl Default for SystemState {
         let mut sys = System::new_all();
         sys.refresh_all();
         Self { sys }
+    }
+}
+
+impl SystemState {
+    pub fn refresh(&mut self) {
+        self.sys.refresh_all();
     }
 }
 
@@ -119,16 +137,31 @@ fn get_system_info(_state: State<SystemState>) -> Result<SystemInfo, String> {
 // 获取CPU信息
 #[tauri::command]
 fn get_cpu_info(state: State<SystemState>) -> Result<CpuInfo, String> {
+    // 直接使用State中的System实例
     let sys = &state.sys;
     
-    let cpu = sys.global_cpu_info();
+    // 注意：我们不能直接修改State中的System对象
+    // 需要创建一个新的System实例来获取最新信息
+    let mut new_sys = System::new_all();
+    new_sys.refresh_all();
+    
+    let cpu = new_sys.global_cpu_info();
     let name = cpu.name().to_string();
     let vendor_id = cpu.vendor_id().to_string();
     let brand = cpu.brand().to_string();
-    let cores = sys.cpus().len();
-    let physical_cores = sys.physical_core_count().unwrap_or(0);
+    let cores = new_sys.cpus().len();
+    let physical_cores = new_sys.physical_core_count().unwrap_or(0);
     let frequency = cpu.frequency();
     let usage = cpu.cpu_usage();
+    
+    // 添加调试信息
+    // println!("CPU Name: {}", name);
+    // println!("CPU Vendor ID: {}", vendor_id);
+    // println!("CPU Brand: {}", brand);
+    // println!("CPU Cores: {}", cores);
+    // println!("CPU Physical Cores: {}", physical_cores);
+    // println!("CPU Frequency: {}", frequency);
+    // println!("CPU Usage: {}", usage);
     
     // 注意：温度信息可能需要特定的库或硬件支持
     let temperature = None;
@@ -435,6 +468,87 @@ async fn get_processes(_state: State<'_, SystemState>) -> Result<Vec<HashMap<Str
     }
 }
 
+// 获取GPU信息
+#[tauri::command]
+async fn get_gpu_info() -> Result<Vec<GpuInfo>, String> {
+    // 使用tokio::task::spawn_blocking在后台线程执行阻塞操作
+    let result = tokio::task::spawn_blocking(|| {
+        // 在Windows上使用wmic命令获取GPU信息
+        #[cfg(target_os = "windows")]
+        {
+            let output = Command::new("wmic")
+                .args(["path", "win32_VideoController", "get", "name,adaptercompatibility,adapterram"])
+                .output();
+            
+            match output {
+                Ok(result) => {
+                    if result.status.success() {
+                        let output_str = String::from_utf8_lossy(&result.stdout);
+                        // 解析输出字符串以提取GPU信息
+                        parse_gpu_info(&output_str)
+                    } else {
+                        // 如果wmic命令失败，返回空向量
+                        Ok(vec![])
+                    }
+                },
+                Err(_) => {
+                    // 如果无法执行命令，返回空向量
+                    Ok(vec![])
+                }
+            }
+        }
+        
+        // 在非Windows系统上，暂时返回空向量
+        #[cfg(not(target_os = "windows"))]
+        {
+            Ok(vec![])
+        }
+    }).await;
+    
+    match result {
+        Ok(res) => res,
+        Err(e) => Err(format!("执行GPU信息获取任务时发生错误: {}", e)),
+    }
+}
+
+// 解析GPU信息输出
+#[cfg(target_os = "windows")]
+fn parse_gpu_info(output: &str) -> Result<Vec<GpuInfo>, String> {
+    let lines: Vec<&str> = output.lines().collect();
+    let mut gpus = Vec::new();
+    
+    // 跳过标题行，从第二行开始处理
+    for line in lines.iter().skip(1) {
+        let trimmed_line = line.trim();
+        if !trimmed_line.is_empty() {
+            // 分割行以获取GPU名称和内存信息
+            let parts: Vec<&str> = trimmed_line.split_whitespace().collect();
+            if parts.len() >= 3 {
+                let name = parts[0..parts.len()-2].join(" ");
+                let vendor = parts[parts.len()-2].to_string();
+                let vram_str = parts[parts.len()-1];
+                
+                // 将VRAM字符串转换为数字（假设是以字节为单位）
+                let vram_total = vram_str.parse::<u64>().unwrap_or(0);
+                
+                let gpu = GpuInfo {
+                    name,
+                    vendor,
+                    vram_total,
+                    vram_used: 0, // 暂时无法获取
+                    vram_free: vram_total, // 暂时无法获取
+                    usage_percent: 0.0, // 暂时无法获取
+                    temperature: None, // 暂时无法获取
+                };
+                
+                gpus.push(gpu);
+            }
+        }
+    }
+    
+    Ok(gpus)
+}
+
 // 初始化Tauri应用
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
@@ -452,6 +566,7 @@ pub fn run() {
             ping_host,
             get_uptime,
             get_processes,
+            get_gpu_info,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
