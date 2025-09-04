@@ -3,9 +3,8 @@ use serde::{Deserialize, Serialize};
 use sysinfo::{System, Networks, Disks};
 use std::collections::HashMap;
 use tauri::State;
-use std::net::{ToSocketAddrs};
-use tokio::time::{timeout, Duration};
 use std::process::Command;
+use cpal::traits::{HostTrait, DeviceTrait};
 
 // 系统信息结构体
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -171,7 +170,7 @@ fn get_memory_info(state: State<SystemState>) -> Result<MemoryInfo, String> {
 async fn get_disk_info(_state: State<'_, SystemState>) -> Result<Vec<DiskInfo>, String> {
     // 在后台线程执行磁盘信息收集
     let disk_infos = tokio::task::spawn_blocking(|| {
-        let mut disks = Disks::new_with_refreshed_list();
+        let disks = Disks::new_with_refreshed_list();
         
         let mut disk_infos = Vec::new();
         
@@ -213,7 +212,7 @@ async fn get_disk_info(_state: State<'_, SystemState>) -> Result<Vec<DiskInfo>, 
 async fn get_network_status(_state: State<'_, SystemState>) -> Result<NetworkStatus, String> {
     // 在后台线程执行网络信息收集
     let network_status = tokio::task::spawn_blocking(|| {
-        let mut networks = Networks::new_with_refreshed_list();
+        let networks = Networks::new_with_refreshed_list();
         
         let mut interfaces = Vec::new();
         let mut is_connected = false;
@@ -259,40 +258,54 @@ async fn get_network_status(_state: State<'_, SystemState>) -> Result<NetworkSta
 // 获取音频设备列表
 #[tauri::command]
 fn get_audio_devices() -> Result<Vec<AudioDevice>, String> {
-    // 注意：Tauri本身不提供音频设备访问功能
-    // 这里返回一个模拟的设备列表
-    // 实际实现可能需要使用特定于平台的API或第三方库
-    
+    let host = cpal::default_host();
     let mut devices = Vec::new();
     
-    // 模拟输入设备
-    devices.push(AudioDevice {
-        name: "Microphone".to_string(),
-        is_default: true,
-        is_input: true,
-        is_output: false,
-        volume: 80,
-        is_muted: false,
-    });
+    // 获取输入设备
+    if let Ok(input_devices) = host.input_devices() {
+        let default_input = host.default_input_device();
+        for device in input_devices {
+            if let Ok(name) = device.name() {
+                let is_default = if let Some(ref default_device) = default_input {
+                    default_device.name().unwrap_or_default() == name
+                } else {
+                    false
+                };
+                
+                devices.push(AudioDevice {
+                    name,
+                    is_default,
+                    is_input: true,
+                    is_output: false,
+                    volume: 0, // CPAL不直接提供音量信息
+                    is_muted: false, // CPAL不直接提供静音状态
+                });
+            }
+        }
+    }
     
-    // 模拟输出设备
-    devices.push(AudioDevice {
-        name: "Speakers".to_string(),
-        is_default: true,
-        is_input: false,
-        is_output: true,
-        volume: 65,
-        is_muted: false,
-    });
-    
-    devices.push(AudioDevice {
-        name: "Headphones".to_string(),
-        is_default: false,
-        is_input: false,
-        is_output: true,
-        volume: 50,
-        is_muted: false,
-    });
+    // 获取输出设备
+    if let Ok(output_devices) = host.output_devices() {
+        let default_output = host.default_output_device();
+        for device in output_devices {
+            if let Ok(name) = device.name() {
+                let is_default = if let Some(ref default_device) = default_output {
+                    default_device.name().unwrap_or_default() == name
+                } else {
+                    false
+                };
+                
+                devices.push(AudioDevice {
+                    name,
+                    is_default,
+                    is_input: false,
+                    is_output: true,
+                    volume: 0, // CPAL不直接提供音量信息
+                    is_muted: false, // CPAL不直接提供静音状态
+                });
+            }
+        }
+    }
     
     Ok(devices)
 }
