@@ -541,26 +541,51 @@ export default function App() {
                     </CardContent>
                   </Card>
 
-                  {/* GPU Card */}
-                  <Card className="bg-white border-gray-200 shadow-sm hover:shadow-md transition-shadow">
-                    <CardHeader className="pb-2 px-4 pt-4">
-                      <div className="flex items-center justify-between">
-                        <CardTitle className="text-xs font-medium text-gray-600">{t('performance.gpu')}</CardTitle>
-                        <div className="flex items-center gap-1 text-green-600 text-xs font-medium">
-                          <span>↗</span>
-                          <span>+10%</span>
+                  {/* GPU Cards - 显示所有GPU */}
+                  {gpuInfo.length > 0 ? (
+                    gpuInfo.map((gpu, index) => (
+                      <Card key={index} className="bg-white border-gray-200 shadow-sm hover:shadow-md transition-shadow">
+                        <CardHeader className="pb-2 px-4 pt-4">
+                          <div className="flex items-center justify-between">
+                            <CardTitle className="text-xs font-medium text-gray-600">
+                              {t('performance.gpu')} {gpuInfo.length > 1 ? index + 1 : ''}
+                            </CardTitle>
+                            <div className="flex items-center gap-1 text-green-600 text-xs font-medium">
+                              <span>↗</span>
+                              <span>+10%</span>
+                            </div>
+                          </div>
+                        </CardHeader>
+                        <CardContent className="px-4 pb-4">
+                          <div className="text-2xl font-bold mb-2 text-gray-800">
+                            {gpu.usage_percent !== undefined ? `${gpu.usage_percent.toFixed(1)}%` : 'N/A'}
+                          </div>
+                          <div className="h-8">
+                            <MiniChart data={[35, 40, 45, 38, 42, 35, 30, 25, 35, 40, 38]} />
+                          </div>
+                        </CardContent>
+                      </Card>
+                    ))
+                  ) : (
+                    // 如果没有GPU信息，显示默认卡片
+                    <Card className="bg-white border-gray-200 shadow-sm hover:shadow-md transition-shadow">
+                      <CardHeader className="pb-2 px-4 pt-4">
+                        <div className="flex items-center justify-between">
+                          <CardTitle className="text-xs font-medium text-gray-600">{t('performance.gpu')}</CardTitle>
+                          <div className="flex items-center gap-1 text-green-600 text-xs font-medium">
+                            <span>↗</span>
+                            <span>+10%</span>
+                          </div>
                         </div>
-                      </div>
-                    </CardHeader>
-                    <CardContent className="px-4 pb-4">
-                      <div className="text-2xl font-bold mb-2 text-gray-800">
-                        {gpuInfo.length > 0 ? `${gpuInfo[0].usage_percent.toFixed(1)}%` : 'N/A'}
-                      </div>
-                      <div className="h-8">
-                        <MiniChart data={gpuInfo.length > 0 ? [35, 40, 45, 38, 42, 35, 30, 25, 35, 40, 38] : []} />
-                      </div>
-                    </CardContent>
-                  </Card>
+                      </CardHeader>
+                      <CardContent className="px-4 pb-4">
+                        <div className="text-2xl font-bold mb-2 text-gray-800">40%</div>
+                        <div className="h-8">
+                          <MiniChart data={[35, 40, 45, 38, 42, 35, 30, 25, 35, 40, 38]} />
+                        </div>
+                      </CardContent>
+                    </Card>
+                  )}
 
                   {/* RAM Card */}
                   <Card className="bg-white border-gray-200 shadow-sm hover:shadow-md transition-shadow">
@@ -653,13 +678,22 @@ export default function App() {
                           </div>
                         </div>
                         <div>
-                          <div className="text-xs text-gray-500 mb-1">Graphics Card</div>
-                          <div className="text-sm font-semibold text-gray-800">
-                            {gpuInfo.length > 0 ? gpuInfo[0].name : 'NVIDIA RTX 3080'}
-                          </div>
-                          <div className="text-xs text-gray-600">
-                            {gpuInfo.length > 0 ? `${(gpuInfo[0].vram_total / (1024 * 1024 * 1024)).toFixed(1)}GB VRAM` : '10GB GDDR6X, 8704 CUDA Cores'}
-                          </div>
+                          <div className="text-xs text-gray-500 mb-1">Graphics Card{gpuInfo.length > 1 ? 's' : ''}</div>
+                          {gpuInfo.length > 0 ? (
+                            gpuInfo.map((gpu, index) => (
+                              <div key={index} className="mb-2 last:mb-0">
+                                <div className="text-sm font-semibold text-gray-800">{gpu.name || `GPU ${index + 1}`}</div>
+                                <div className="text-xs text-gray-600">
+                                  {gpu.vram_total ? `${(gpu.vram_total / (1024 * 1024 * 1024)).toFixed(1)}GB VRAM` : 'VRAM info not available'}
+                                </div>
+                              </div>
+                            ))
+                          ) : (
+                            <>
+                              <div className="text-sm font-semibold text-gray-800">NVIDIA RTX 3080</div>
+                              <div className="text-xs text-gray-600">10GB GDDR6X, 8704 CUDA Cores</div>
+                            </>
+                          )}
                         </div>
                         <div>
                           <div className="text-xs text-gray-500 mb-1">Memory</div>

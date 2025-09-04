@@ -200,28 +200,50 @@ const TestPage = () => {
           };
         }
       })(),
-      
-      // 测试系统运行时间命令
-      (async (): Promise<TestResult> => {
-        try {
-          const input = null;
-          const output = await SystemMonitorAPI.getUptime();
-          return {
-            functionName: 'getUptime',
-            input,
-            output,
-            success: true
-          };
-        } catch (err) {
-          return {
-            functionName: 'getUptime',
-            input: null,
-            output: null,
-            success: false,
-            error: String(err)
-          };
-        }
-      })(),
+     
+     // 测试GPU信息命令
+     (async (): Promise<TestResult> => {
+       try {
+         const input = null;
+         const output = await SystemMonitorAPI.getGpuInfo();
+         return {
+           functionName: 'getGpuInfo',
+           input,
+           output,
+           success: true
+         };
+       } catch (err) {
+         return {
+           functionName: 'getGpuInfo',
+           input: null,
+           output: null,
+           success: false,
+           error: String(err)
+         };
+       }
+     })(),
+     
+     // 测试系统运行时间命令
+     (async (): Promise<TestResult> => {
+       try {
+         const input = null;
+         const output = await SystemMonitorAPI.getUptime();
+         return {
+           functionName: 'getUptime',
+           input,
+           output,
+           success: true
+         };
+       } catch (err) {
+         return {
+           functionName: 'getUptime',
+           input: null,
+           output: null,
+           success: false,
+           error: String(err)
+         };
+       }
+     })(),
       
       // 测试进程列表命令
       (async (): Promise<TestResult> => {

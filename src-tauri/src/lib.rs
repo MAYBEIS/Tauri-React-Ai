@@ -368,7 +368,7 @@ async fn ping_host(host: String) -> Result<String, String> {
                 if result.status.success() {
                     // 解析ping输出以获取延迟
                     let latency = parse_ping_latency(&stdout_str);
-                    Ok(format!("Ping {} 成功，延迟: {}ms", host, latency))
+                    Ok(format!("Ping {} 成功: {}", host, latency))
                 } else {
                     Err(format!("Ping {} 失败: stdout={}, stderr={}", host, stdout_str, stderr_str))
                 }
@@ -409,9 +409,9 @@ fn parse_ping_latency(output: &str) -> String {
     
     // 如果没有找到预期的模式，返回原始输出的一部分用于调试
     if output.len() > 100 {
-        format!("N/A (output: {}...)", &output[..100])
+        format!("(output: {}...)", &output[..100])
     } else {
-        format!("N/A (output: {})", output)
+        format!("(output: {})", output)
     }
 }
 
