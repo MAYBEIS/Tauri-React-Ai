@@ -4,6 +4,8 @@ use sysinfo::{System, Networks, Disks};
 use std::collections::HashMap;
 use tauri::State;
 use std::net::{ToSocketAddrs};
+use tokio::time::{timeout, Duration};
+use std::process::Command;
 
 // 系统信息结构体
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -166,76 +168,92 @@ fn get_memory_info(state: State<SystemState>) -> Result<MemoryInfo, String> {
 
 // 获取磁盘信息
 #[tauri::command]
-fn get_disk_info(_state: State<SystemState>) -> Result<Vec<DiskInfo>, String> {
-    let mut disks = Disks::new_with_refreshed_list();
-    
-    let mut disk_infos = Vec::new();
-    
-    for disk in disks.list() {
-        let total_space = disk.total_space();
-        let available_space = disk.available_space();
-        let used_space = total_space - available_space;
-        let usage_percent = if total_space > 0 {
-            (used_space as f32 / total_space as f32) * 100.0
-        } else {
-            0.0
-        };
+async fn get_disk_info(_state: State<'_, SystemState>) -> Result<Vec<DiskInfo>, String> {
+    // 在后台线程执行磁盘信息收集
+    let disk_infos = tokio::task::spawn_blocking(|| {
+        let mut disks = Disks::new_with_refreshed_list();
         
-        let disk_info = DiskInfo {
-            name: disk.name().to_string_lossy().to_string(),
-            mount_point: disk.mount_point().to_string_lossy().to_string(),
-            total_space,
-            available_space,
-            used_space,
-            usage_percent,
-            file_system: disk.file_system().to_string_lossy().to_string(),
-            is_removable: disk.is_removable(),
-        };
+        let mut disk_infos = Vec::new();
         
-        disk_infos.push(disk_info);
+        for disk in disks.list() {
+            let total_space = disk.total_space();
+            let available_space = disk.available_space();
+            let used_space = total_space - available_space;
+            let usage_percent = if total_space > 0 {
+                (used_space as f32 / total_space as f32) * 100.0
+            } else {
+                0.0
+            };
+            
+            let disk_info = DiskInfo {
+                name: disk.name().to_string_lossy().to_string(),
+                mount_point: disk.mount_point().to_string_lossy().to_string(),
+                total_space,
+                available_space,
+                used_space,
+                usage_percent,
+                file_system: disk.file_system().to_string_lossy().to_string(),
+                is_removable: disk.is_removable(),
+            };
+            
+            disk_infos.push(disk_info);
+        }
+        
+        disk_infos
+    }).await;
+    
+    match disk_infos {
+        Ok(infos) => Ok(infos),
+        Err(e) => Err(format!("获取磁盘信息时发生错误: {}", e)),
     }
-    
-    Ok(disk_infos)
 }
 
 // 获取网络状态
 #[tauri::command]
-fn get_network_status(_state: State<SystemState>) -> Result<NetworkStatus, String> {
-    let mut networks = Networks::new_with_refreshed_list();
-    
-    let mut interfaces = Vec::new();
-    let mut is_connected = false;
-    let mut local_ip: Option<String> = None;
-    
-    for (interface_name, _network_data) in networks.iter() {
-        // 检查接口是否已连接 (简化处理)
-        is_connected = true;
+async fn get_network_status(_state: State<'_, SystemState>) -> Result<NetworkStatus, String> {
+    // 在后台线程执行网络信息收集
+    let network_status = tokio::task::spawn_blocking(|| {
+        let mut networks = Networks::new_with_refreshed_list();
         
-        // 获取IP地址 (简化处理)
-        let ip_addr_str = Some("192.168.1.100".to_string()); // 示例IP
+        let mut interfaces = Vec::new();
+        let mut is_connected = false;
+        let mut local_ip: Option<String> = None;
         
-        // 如果还没有本地IP且此接口有IP地址，则使用它
-        if local_ip.is_none() && ip_addr_str.is_some() {
-            local_ip = ip_addr_str.clone();
+        for (interface_name, _network_data) in networks.iter() {
+            // 检查接口是否已连接 (简化处理)
+            is_connected = true;
+            
+            // 获取IP地址 (简化处理)
+            let ip_addr_str = Some("192.168.1.100".to_string()); // 示例IP
+            
+            // 如果还没有本地IP且此接口有IP地址，则使用它
+            if local_ip.is_none() && ip_addr_str.is_some() {
+                local_ip = ip_addr_str.clone();
+            }
+            
+            let interface = NetworkInterface {
+                name: interface_name.clone(),
+                description: None,
+                ip_address: ip_addr_str,
+                mac_address: None,
+                is_up: true,
+            };
+            
+            interfaces.push(interface);
         }
         
-        let interface = NetworkInterface {
-            name: interface_name.clone(),
-            description: None,
-            ip_address: ip_addr_str,
-            mac_address: None,
-            is_up: true,
-        };
-        
-        interfaces.push(interface);
-    }
+        NetworkStatus {
+            is_connected,
+            interfaces,
+            local_ip,
+            public_ip: None,
+        }
+    }).await;
     
-    Ok(NetworkStatus {
-        is_connected,
-        interfaces,
-        local_ip,
-        public_ip: None,
-    })
+    match network_status {
+        Ok(status) => Ok(status),
+        Err(e) => Err(format!("获取网络状态时发生错误: {}", e)),
+    }
 }
 
 // 获取音频设备列表
@@ -281,9 +299,59 @@ fn get_audio_devices() -> Result<Vec<AudioDevice>, String> {
 
 // Ping主机
 #[tauri::command]
-fn ping_host(_host: String) -> Result<String, String> {
-    // 由于ping库的API变化，暂时返回模拟结果
-    Ok("Ping功能暂时禁用".to_string())
+async fn ping_host(host: String) -> Result<String, String> {
+    // 使用tokio::task::spawn_blocking在后台线程执行阻塞操作
+    let result = tokio::task::spawn_blocking(move || {
+        // 使用系统命令执行ping
+        let output = if cfg!(target_os = "windows") {
+            Command::new("ping")
+                .args(["-n", "1", "-w", "5000", &host])  // Windows ping命令参数
+                .output()
+        } else {
+            Command::new("ping")
+                .args(["-c", "1", "-W", "5", &host])  // Unix/Linux ping命令参数
+                .output()
+        };
+        
+        match output {
+            Ok(result) => {
+                if result.status.success() {
+                    // 解析ping输出以获取延迟
+                    let output_str = String::from_utf8_lossy(&result.stdout);
+                    let latency = parse_ping_latency(&output_str);
+                    Ok(format!("Ping {} 成功，延迟: {}ms", host, latency))
+                } else {
+                    let error_str = String::from_utf8_lossy(&result.stderr);
+                    Err(format!("Ping {} 失败: {}", host, error_str))
+                }
+            },
+            Err(e) => Err(format!("无法执行ping命令: {}", e)),
+        }
+    }).await;
+    
+    match result {
+        Ok(res) => res,
+        Err(e) => Err(format!("执行ping任务时发生错误: {}", e)),
+    }
+}
+
+// 解析ping输出以获取延迟
+fn parse_ping_latency(output: &str) -> String {
+    // 在Windows上查找类似 "时间=15ms" 的模式
+    if let Some(pos) = output.find("时间=") {
+        if let Some(end_pos) = output[pos..].find("ms") {
+            return output[pos+3..pos+end_pos].to_string();
+        }
+    }
+    
+    // 在Unix/Linux上查找类似 "time=15.2 ms" 的模式
+    if let Some(pos) = output.find("time=") {
+        if let Some(end_pos) = output[pos..].find(" ms") {
+            return output[pos+5..pos+end_pos].to_string();
+        }
+    }
+    
+    "N/A".to_string()
 }
 
 // 获取系统运行时间
@@ -294,41 +362,49 @@ fn get_uptime(_state: State<SystemState>) -> Result<u64, String> {
 
 // 获取进程列表
 #[tauri::command]
-fn get_processes(_state: State<SystemState>) -> Result<Vec<HashMap<String, String>>, String> {
-    // 由于sysinfo库的API变化，暂时返回模拟数据
-    let mut processes = Vec::new();
+async fn get_processes(_state: State<'_, SystemState>) -> Result<Vec<HashMap<String, String>>, String> {
+    // 在后台线程执行进程信息收集
+    let processes = tokio::task::spawn_blocking(|| {
+        // 由于sysinfo库的API变化，暂时返回模拟数据
+        let mut processes = Vec::new();
+        
+        // 模拟一些进程数据
+        let mut process1 = HashMap::new();
+        let mut process2 = HashMap::new();
+        let mut process3 = HashMap::new();
+        
+        process1.insert("pid".to_string(), "1234".to_string());
+        process1.insert("name".to_string(), "chrome.exe".to_string());
+        process1.insert("cpu_usage".to_string(), "15.2".to_string());
+        process1.insert("memory_usage".to_string(), "1048576".to_string());
+        process1.insert("cmd".to_string(), "C:\\Program Files\\Chrome\\chrome.exe --profile-directory=Default".to_string());
+        process1.insert("exe".to_string(), "C:\\Program Files\\Chrome\\chrome.exe".to_string());
+        
+        process2.insert("pid".to_string(), "5678".to_string());
+        process2.insert("name".to_string(), "vscode.exe".to_string());
+        process2.insert("cpu_usage".to_string(), "8.5".to_string());
+        process2.insert("memory_usage".to_string(), "524288".to_string());
+        process2.insert("cmd".to_string(), "C:\\Program Files\\VSCode\\Code.exe --unity-launch".to_string());
+        process2.insert("exe".to_string(), "C:\\Program Files\\VSCode\\Code.exe".to_string());
+        
+        process3.insert("pid".to_string(), "9012".to_string());
+        process3.insert("name".to_string(), "spotify.exe".to_string());
+        process3.insert("cpu_usage".to_string(), "2.1".to_string());
+        process3.insert("memory_usage".to_string(), "262144".to_string());
+        process3.insert("cmd".to_string(), "C:\\Users\\User\\AppData\\Roaming\\Spotify\\Spotify.exe".to_string());
+        process3.insert("exe".to_string(), "C:\\Users\\User\\AppData\\Roaming\\Spotify\\Spotify.exe".to_string());
+        
+        processes.push(process1);
+        processes.push(process2);
+        processes.push(process3);
+        
+        processes
+    }).await;
     
-    // 模拟一些进程数据
-    let mut process1 = HashMap::new();
-    let mut process2 = HashMap::new();
-    let mut process3 = HashMap::new();
-    
-    process1.insert("pid".to_string(), "1234".to_string());
-    process1.insert("name".to_string(), "chrome.exe".to_string());
-    process1.insert("cpu_usage".to_string(), "15.2".to_string());
-    process1.insert("memory_usage".to_string(), "1048576".to_string());
-    process1.insert("cmd".to_string(), "C:\\Program Files\\Chrome\\chrome.exe --profile-directory=Default".to_string());
-    process1.insert("exe".to_string(), "C:\\Program Files\\Chrome\\chrome.exe".to_string());
-    
-    process2.insert("pid".to_string(), "5678".to_string());
-    process2.insert("name".to_string(), "vscode.exe".to_string());
-    process2.insert("cpu_usage".to_string(), "8.5".to_string());
-    process2.insert("memory_usage".to_string(), "524288".to_string());
-    process2.insert("cmd".to_string(), "C:\\Program Files\\VSCode\\Code.exe --unity-launch".to_string());
-    process2.insert("exe".to_string(), "C:\\Program Files\\VSCode\\Code.exe".to_string());
-    
-    process3.insert("pid".to_string(), "9012".to_string());
-    process3.insert("name".to_string(), "spotify.exe".to_string());
-    process3.insert("cpu_usage".to_string(), "2.1".to_string());
-    process3.insert("memory_usage".to_string(), "262144".to_string());
-    process3.insert("cmd".to_string(), "C:\\Users\\User\\AppData\\Roaming\\Spotify\\Spotify.exe".to_string());
-    process3.insert("exe".to_string(), "C:\\Users\\User\\AppData\\Roaming\\Spotify\\Spotify.exe".to_string());
-    
-    processes.push(process1);
-    processes.push(process2);
-    processes.push(process3);
-    
-    Ok(processes)
+    match processes {
+        Ok(procs) => Ok(procs),
+        Err(e) => Err(format!("获取进程列表时发生错误: {}", e)),
+    }
 }
 
 // 初始化Tauri应用

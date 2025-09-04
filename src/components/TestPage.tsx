@@ -44,207 +44,232 @@ const TestPage = () => {
 
   const testAllCommands = async () => {
     setLoading(true);
-    const results: TestResult[] = [];
     
-    // 测试greet命令
-    try {
-      const input = 'Test User';
-      const output = await SystemMonitorAPI.greet(input);
-      results.push({
-        functionName: 'greet',
-        input,
-        output,
-        success: true
-      });
-    } catch (err) {
-      results.push({
-        functionName: 'greet',
-        input: 'Test User',
-        output: null,
-        success: false,
-        error: String(err)
-      });
-    }
+    // 创建所有测试任务的Promise数组
+    const testPromises = [
+      // 测试greet命令
+      (async (): Promise<TestResult> => {
+        try {
+          const input = 'Test User';
+          const output = await SystemMonitorAPI.greet(input);
+          return {
+            functionName: 'greet',
+            input,
+            output,
+            success: true
+          };
+        } catch (err) {
+          return {
+            functionName: 'greet',
+            input: 'Test User',
+            output: null,
+            success: false,
+            error: String(err)
+          };
+        }
+      })(),
+      
+      // 测试系统信息命令
+      (async (): Promise<TestResult> => {
+        try {
+          const input = null;
+          const output = await SystemMonitorAPI.getSystemInfo();
+          return {
+            functionName: 'getSystemInfo',
+            input,
+            output,
+            success: true
+          };
+        } catch (err) {
+          return {
+            functionName: 'getSystemInfo',
+            input: null,
+            output: null,
+            success: false,
+            error: String(err)
+          };
+        }
+      })(),
+      
+      // 测试CPU信息命令
+      (async (): Promise<TestResult> => {
+        try {
+          const input = null;
+          const output = await SystemMonitorAPI.getCpuInfo();
+          return {
+            functionName: 'getCpuInfo',
+            input,
+            output,
+            success: true
+          };
+        } catch (err) {
+          return {
+            functionName: 'getCpuInfo',
+            input: null,
+            output: null,
+            success: false,
+            error: String(err)
+          };
+        }
+      })(),
+      
+      // 测试内存信息命令
+      (async (): Promise<TestResult> => {
+        try {
+          const input = null;
+          const output = await SystemMonitorAPI.getMemoryInfo();
+          return {
+            functionName: 'getMemoryInfo',
+            input,
+            output,
+            success: true
+          };
+        } catch (err) {
+          return {
+            functionName: 'getMemoryInfo',
+            input: null,
+            output: null,
+            success: false,
+            error: String(err)
+          };
+        }
+      })(),
+      
+      // 测试磁盘信息命令
+      (async (): Promise<TestResult> => {
+        try {
+          const input = null;
+          const output = await SystemMonitorAPI.getDiskInfo();
+          return {
+            functionName: 'getDiskInfo',
+            input,
+            output,
+            success: true
+          };
+        } catch (err) {
+          return {
+            functionName: 'getDiskInfo',
+            input: null,
+            output: null,
+            success: false,
+            error: String(err)
+          };
+        }
+      })(),
+      
+      // 测试网络状态命令
+      (async (): Promise<TestResult> => {
+        try {
+          const input = null;
+          const output = await SystemMonitorAPI.getNetworkStatus();
+          return {
+            functionName: 'getNetworkStatus',
+            input,
+            output,
+            success: true
+          };
+        } catch (err) {
+          return {
+            functionName: 'getNetworkStatus',
+            input: null,
+            output: null,
+            success: false,
+            error: String(err)
+          };
+        }
+      })(),
+      
+      // 测试音频设备命令
+      (async (): Promise<TestResult> => {
+        try {
+          const input = null;
+          const output = await SystemMonitorAPI.getAudioDevices();
+          return {
+            functionName: 'getAudioDevices',
+            input,
+            output,
+            success: true
+          };
+        } catch (err) {
+          return {
+            functionName: 'getAudioDevices',
+            input: null,
+            output: null,
+            success: false,
+            error: String(err)
+          };
+        }
+      })(),
+      
+      // 测试系统运行时间命令
+      (async (): Promise<TestResult> => {
+        try {
+          const input = null;
+          const output = await SystemMonitorAPI.getUptime();
+          return {
+            functionName: 'getUptime',
+            input,
+            output,
+            success: true
+          };
+        } catch (err) {
+          return {
+            functionName: 'getUptime',
+            input: null,
+            output: null,
+            success: false,
+            error: String(err)
+          };
+        }
+      })(),
+      
+      // 测试进程列表命令
+      (async (): Promise<TestResult> => {
+        try {
+          const input = null;
+          const output = await SystemMonitorAPI.getProcesses();
+          return {
+            functionName: 'getProcesses',
+            input,
+            output,
+            success: true
+          };
+        } catch (err) {
+          return {
+            functionName: 'getProcesses',
+            input: null,
+            output: null,
+            success: false,
+            error: String(err)
+          };
+        }
+      })(),
+      
+      // 测试ping命令
+      (async (): Promise<TestResult> => {
+        try {
+          const input = 'www.baidu.com';
+          const output = await SystemMonitorAPI.pingHost(input);
+          return {
+            functionName: 'pingHost',
+            input,
+            output,
+            success: true
+          };
+        } catch (err) {
+          return {
+            functionName: 'pingHost',
+            input: 'www.baidu.com',
+            output: "Error",
+            success: false,
+            error: String(err)
+          };
+        }
+      })()
+    ];
     
-    // 测试系统信息命令
-    try {
-      const input = null;
-      const output = await SystemMonitorAPI.getSystemInfo();
-      results.push({
-        functionName: 'getSystemInfo',
-        input,
-        output,
-        success: true
-      });
-    } catch (err) {
-      results.push({
-        functionName: 'getSystemInfo',
-        input: null,
-        output: null,
-        success: false,
-        error: String(err)
-      });
-    }
-    
-    // 测试CPU信息命令
-    try {
-      const input = null;
-      const output = await SystemMonitorAPI.getCpuInfo();
-      results.push({
-        functionName: 'getCpuInfo',
-        input,
-        output,
-        success: true
-      });
-    } catch (err) {
-      results.push({
-        functionName: 'getCpuInfo',
-        input: null,
-        output: null,
-        success: false,
-        error: String(err)
-      });
-    }
-    
-    // 测试内存信息命令
-    try {
-      const input = null;
-      const output = await SystemMonitorAPI.getMemoryInfo();
-      results.push({
-        functionName: 'getMemoryInfo',
-        input,
-        output,
-        success: true
-      });
-    } catch (err) {
-      results.push({
-        functionName: 'getMemoryInfo',
-        input: null,
-        output: null,
-        success: false,
-        error: String(err)
-      });
-    }
-    
-    // 测试磁盘信息命令
-    try {
-      const input = null;
-      const output = await SystemMonitorAPI.getDiskInfo();
-      results.push({
-        functionName: 'getDiskInfo',
-        input,
-        output,
-        success: true
-      });
-    } catch (err) {
-      results.push({
-        functionName: 'getDiskInfo',
-        input: null,
-        output: null,
-        success: false,
-        error: String(err)
-      });
-    }
-    
-    // 测试网络状态命令
-    try {
-      const input = null;
-      const output = await SystemMonitorAPI.getNetworkStatus();
-      results.push({
-        functionName: 'getNetworkStatus',
-        input,
-        output,
-        success: true
-      });
-    } catch (err) {
-      results.push({
-        functionName: 'getNetworkStatus',
-        input: null,
-        output: null,
-        success: false,
-        error: String(err)
-      });
-    }
-    
-    // 测试音频设备命令
-    try {
-      const input = null;
-      const output = await SystemMonitorAPI.getAudioDevices();
-      results.push({
-        functionName: 'getAudioDevices',
-        input,
-        output,
-        success: true
-      });
-    } catch (err) {
-      results.push({
-        functionName: 'getAudioDevices',
-        input: null,
-        output: null,
-        success: false,
-        error: String(err)
-      });
-    }
-    
-    // 测试系统运行时间命令
-    try {
-      const input = null;
-      const output = await SystemMonitorAPI.getUptime();
-      results.push({
-        functionName: 'getUptime',
-        input,
-        output,
-        success: true
-      });
-    } catch (err) {
-      results.push({
-        functionName: 'getUptime',
-        input: null,
-        output: null,
-        success: false,
-        error: String(err)
-      });
-    }
-    
-    // 测试进程列表命令
-    try {
-      const input = null;
-      const output = await SystemMonitorAPI.getProcesses();
-      results.push({
-        functionName: 'getProcesses',
-        input,
-        output,
-        success: true
-      });
-    } catch (err) {
-      results.push({
-        functionName: 'getProcesses',
-        input: null,
-        output: null,
-        success: false,
-        error: String(err)
-      });
-    }
-    
-    // 测试ping命令
-    try {
-      const input = 'google.com';
-      const output = await SystemMonitorAPI.pingHost(input);
-      results.push({
-        functionName: 'pingHost',
-        input,
-        output,
-        success: true
-      });
-    } catch (err) {
-      results.push({
-        functionName: 'pingHost',
-        input: 'google.com',
-        output: null,
-        success: false,
-        error: String(err)
-      });
-    }
+    // 并发执行所有测试
+    const results = await Promise.all(testPromises);
     
     setTestResults(results);
     setLoading(false);
