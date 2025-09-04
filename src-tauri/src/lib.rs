@@ -328,14 +328,16 @@ async fn ping_host(host: String) -> Result<String, String> {
         
         match output {
             Ok(result) => {
+                // 添加调试信息
+                let stdout_str = String::from_utf8_lossy(&result.stdout);
+                let stderr_str = String::from_utf8_lossy(&result.stderr);
+                
                 if result.status.success() {
                     // 解析ping输出以获取延迟
-                    let output_str = String::from_utf8_lossy(&result.stdout);
-                    let latency = parse_ping_latency(&output_str);
+                    let latency = parse_ping_latency(&stdout_str);
                     Ok(format!("Ping {} 成功，延迟: {}ms", host, latency))
                 } else {
-                    let error_str = String::from_utf8_lossy(&result.stderr);
-                    Err(format!("Ping {} 失败: {}", host, error_str))
+                    Err(format!("Ping {} 失败: stdout={}, stderr={}", host, stdout_str, stderr_str))
                 }
             },
             Err(e) => Err(format!("无法执行ping命令: {}", e)),
@@ -353,18 +355,31 @@ fn parse_ping_latency(output: &str) -> String {
     // 在Windows上查找类似 "时间=15ms" 的模式
     if let Some(pos) = output.find("时间=") {
         if let Some(end_pos) = output[pos..].find("ms") {
-            return output[pos+3..pos+end_pos].to_string();
+            // 确保索引不会越界
+            let start = pos + 3; // "时间=".len()
+            if start < pos + end_pos {
+                return output[start..pos + end_pos].to_string();
+            }
         }
     }
     
     // 在Unix/Linux上查找类似 "time=15.2 ms" 的模式
     if let Some(pos) = output.find("time=") {
         if let Some(end_pos) = output[pos..].find(" ms") {
-            return output[pos+5..pos+end_pos].to_string();
+            // 确保索引不会越界
+            let start = pos + 5; // "time=".len()
+            if start < pos + end_pos {
+                return output[start..pos + end_pos].to_string();
+            }
         }
     }
     
-    "N/A".to_string()
+    // 如果没有找到预期的模式，返回原始输出的一部分用于调试
+    if output.len() > 100 {
+        format!("N/A (output: {}...)", &output[..100])
+    } else {
+        format!("N/A (output: {})", output)
+    }
 }
 
 // 获取系统运行时间
