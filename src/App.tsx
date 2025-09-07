@@ -938,6 +938,7 @@ export default function App() {
                         Ping
                       </Button>
                     </div>
+                    {pingResult && <div className="bg-gray-100 p-3 rounded-lg font-mono text-sm selectable">{pingResult}</div>}
                     {pingResult && <div className="bg-gray-100 p-3 rounded-lg font-mono text-sm">{pingResult}</div>}
                   </CardContent>
                 </Card>

@@ -136,3 +136,20 @@
     @apply bg-background text-foreground;
   }
 }
+
+
+/* 全局禁用文本选择 */
+* {
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+  user-select: none;
+}
+
+/* 允许文本选择的类 */
+.selectable, input, textarea {
+  -webkit-user-select: text;
+  -moz-user-select: text;
+  -ms-user-select: text;
+  user-select: text;
+}

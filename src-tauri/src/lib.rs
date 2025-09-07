@@ -142,7 +142,7 @@ fn get_cpu_info(state: State<SystemState>) -> Result<CpuInfo, String> {
     
     // 注意：我们不能直接修改State中的System对象
     // 需要创建一个新的System实例来获取最新信息
-    let mut new_sys = System::new_all();
+    let mut new_sys: System = System::new_all();
     new_sys.refresh_all();
     
     let cpu = new_sys.global_cpu_info();
