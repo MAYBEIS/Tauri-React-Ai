@@ -530,7 +530,7 @@ async fn get_gpu_info() -> Result<Vec<GpuInfo>, String> {
 
 // 解析NVIDIA GPU信息输出
 #[cfg(target_os = "windows")]
-async fn parse_nvidia_gpu_info(output: &str) -> Result<Vec<GpuInfo>, String> {
+fn parse_nvidia_gpu_info(output: &str) -> Result<Vec<GpuInfo>, String> {
     let lines: Vec<&str> = output.lines().collect();
     let mut gpus = Vec::new();
     
