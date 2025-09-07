@@ -1,11 +1,12 @@
 import { invoke } from '@tauri-apps/api/core';
+import { vi } from 'vitest';
 
 /**
  * IPC测试工具类
  * 提供模拟Tauri IPC调用的功能
  */
 export class IPCTestUtils {
-  private static mockInvoke = jest.fn();
+  private static mockInvoke = vi.fn();
 
   /**
    * 设置模拟的IPC调用
