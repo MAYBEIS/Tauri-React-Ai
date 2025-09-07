@@ -2,18 +2,12 @@
 
 一个基于 Tauri 和 React 构建的现代化系统监控应用程序，集成了 AI 功能和多语言支持。
 
-✅ **现代化技术栈** - Tauri 2.x + React 19 + TypeScript + Vite  
-
-✅ **完整组件库** - shadcn/ui + Radix UI 提供丰富的UI组件
-
-✅ **国际化支持** - 完善的i18next多语言框架（中英文）
-
-✅ **性能优化** - 使用useCallback和memo进行组件优化
-
-✅ **模块化设计** - 清晰的代码结构和API封装
-
-✅ **响应式UI** - Tailwind CSS + 现代化设计
-
+- ✅ **现代化技术栈** - Tauri 2.x + React 19 + TypeScript + Vite  
+- ✅ **完整组件库** - shadcn/ui + Radix UI 提供丰富的UI组件
+- ✅ **国际化支持** - 完善的i18next多语言框架（中英文）
+- ✅ **性能优化** - 使用useCallback和memo进行组件优化
+- ✅ **模块化设计** - 清晰的代码结构和API封装
+- ✅ **响应式UI** - Tailwind CSS + 现代化设计
 
 ![](img/Snipaste_2025-09-02_18-20-53.png)
 
