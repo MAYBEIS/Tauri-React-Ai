@@ -473,18 +473,35 @@ async fn get_processes(_state: State<'_, SystemState>) -> Result<Vec<HashMap<Str
 async fn get_gpu_info() -> Result<Vec<GpuInfo>, String> {
     // 使用tokio::task::spawn_blocking在后台线程执行阻塞操作
     let result = tokio::task::spawn_blocking(|| {
-        // 在Windows上使用wmic命令获取GPU信息
+        // 在Windows上优先使用nvidia-smi命令获取GPU信息（如果可用）
         #[cfg(target_os = "windows")]
         {
-            let output = Command::new("wmic")
+            // 尝试使用nvidia-smi获取NVIDIA GPU信息
+            let nvidia_smi_output = Command::new("nvidia-smi")
+                .args([
+                    "--query-gpu=name,memory.total,memory.used,memory.free,utilization.gpu,temperature.gpu",
+                    "--format=csv,noheader,nounits"
+                ])
+                .output();
+            
+            if let Ok(output) = nvidia_smi_output {
+                if output.status.success() {
+                    let output_str = String::from_utf8_lossy(&output.stdout);
+                    // 解析nvidia-smi输出字符串以提取GPU信息
+                    return parse_nvidia_gpu_info(&output_str);
+                }
+            }
+            
+            // 如果nvidia-smi不可用或失败，回退到使用wmic命令获取GPU信息
+            let wmic_output = Command::new("wmic")
                 .args(["path", "win32_VideoController", "get", "name,adaptercompatibility,adapterram"])
                 .output();
             
-            match output {
+            match wmic_output {
                 Ok(result) => {
                     if result.status.success() {
                         let output_str = String::from_utf8_lossy(&result.stdout);
-                        // 解析输出字符串以提取GPU信息
+                        // 解析wmic输出字符串以提取GPU信息
                         parse_gpu_info(&output_str)
                     } else {
                         // 如果wmic命令失败，返回空向量
@@ -511,7 +528,44 @@ async fn get_gpu_info() -> Result<Vec<GpuInfo>, String> {
     }
 }
 
-// 解析GPU信息输出
+// 解析NVIDIA GPU信息输出
+#[cfg(target_os = "windows")]
+async fn parse_nvidia_gpu_info(output: &str) -> Result<Vec<GpuInfo>, String> {
+    let lines: Vec<&str> = output.lines().collect();
+    let mut gpus = Vec::new();
+    
+    for line in lines.iter() {
+        let trimmed_line = line.trim();
+        if !trimmed_line.is_empty() {
+            // 分割行以获取GPU信息
+            let parts: Vec<&str> = trimmed_line.split(',').collect();
+            if parts.len() >= 6 {
+                let name = parts[0].trim().to_string();
+                let vram_total = parts[1].trim().parse::<u64>().unwrap_or(0) * 1024 * 1024; // 转换为字节
+                let vram_used = parts[2].trim().parse::<u64>().unwrap_or(0) * 1024 * 1024; // 转换为字节
+                let vram_free = parts[3].trim().parse::<u64>().unwrap_or(0) * 1024 * 1024; // 转换为字节
+                let usage_percent = parts[4].trim().parse::<f32>().unwrap_or(0.0);
+                let temperature = Some(parts[5].trim().parse::<f32>().unwrap_or(0.0));
+                
+                let gpu = GpuInfo {
+                    name,
+                    vendor: "NVIDIA".to_string(),
+                    vram_total,
+                    vram_used,
+                    vram_free,
+                    usage_percent,
+                    temperature,
+                };
+                
+                gpus.push(gpu);
+            }
+        }
+    }
+    
+    Ok(gpus)
+}
+
+// 解析GPU信息输出 (wmic)
 #[cfg(target_os = "windows")]
 fn parse_gpu_info(output: &str) -> Result<Vec<GpuInfo>, String> {
     let lines: Vec<&str> = output.lines().collect();

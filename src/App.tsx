@@ -563,6 +563,11 @@ export default function App() {
                           <div className="h-8">
                             <MiniChart data={[35, 40, 45, 38, 42, 35, 30, 25, 35, 40, 38]} />
                           </div>
+                          {gpu.vram_total > 0 && (
+                            <div className="mt-2 text-xs text-gray-600">
+                              VRAM: {gpu.vram_used > 0 ? `${(gpu.vram_used / (1024 * 1024 * 1024)).toFixed(1)}GB` : 'N/A'} / {(gpu.vram_total / (1024 * 1024 * 1024)).toFixed(1)}GB
+                            </div>
+                          )}
                         </CardContent>
                       </Card>
                     ))
