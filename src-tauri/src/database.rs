@@ -5,6 +5,31 @@ use uuid::Uuid;
 use std::path::PathBuf;
 use tauri::{AppHandle, Manager};
 
+// 警报配置结构体
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct AlertConfiguration {
+    pub id: String,
+    pub metric: String,
+    pub condition: String,
+    pub threshold: f64,
+    pub severity: String,
+    pub enabled: bool,
+    pub notification_methods: Vec<String>,
+}
+
+// 警报历史结构体
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct AlertHistory {
+    pub id: String,
+    pub alert_id: String,
+    pub triggered_at: DateTime<Utc>,
+    pub value: f64,
+    pub message: String,
+    pub acknowledged: bool,
+    pub acknowledged_at: Option<DateTime<Utc>>,
+    pub acknowledged_by: Option<String>,
+}
+
 // 历史系统数据结构体
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct HistoricalSystemData {
@@ -120,9 +145,59 @@ impl DatabaseManager {
         .execute(&self.pool)
         .await?;
         
+        // 创建警报配置表
+        sqlx::query(
+            r#"
+            CREATE TABLE IF NOT EXISTS alert_configurations (
+                id TEXT PRIMARY KEY,
+                metric TEXT NOT NULL,
+                condition TEXT NOT NULL,
+                threshold REAL NOT NULL,
+                severity TEXT NOT NULL,
+                enabled INTEGER NOT NULL DEFAULT 1,
+                notification_methods TEXT NOT NULL,
+                created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+                updated_at TEXT DEFAULT CURRENT_TIMESTAMP
+            )
+            "#,
+        )
+        .execute(&self.pool)
+        .await?;
+        
+        // 创建警报历史表
+        sqlx::query(
+            r#"
+            CREATE TABLE IF NOT EXISTS alert_history (
+                id TEXT PRIMARY KEY,
+                alert_id TEXT NOT NULL,
+                triggered_at TEXT NOT NULL,
+                value REAL NOT NULL,
+                message TEXT NOT NULL,
+                acknowledged INTEGER NOT NULL DEFAULT 0,
+                acknowledged_at TEXT,
+                acknowledged_by TEXT,
+                FOREIGN KEY (alert_id) REFERENCES alert_configurations (id) ON DELETE CASCADE
+            )
+            "#,
+        )
+        .execute(&self.pool)
+        .await?;
+        
         // 创建索引以提高查询性能
         sqlx::query(
             "CREATE INDEX IF NOT EXISTS idx_historical_data_timestamp ON historical_system_data (timestamp)",
+        )
+        .execute(&self.pool)
+        .await?;
+        
+        sqlx::query(
+            "CREATE INDEX IF NOT EXISTS idx_alert_configurations_metric ON alert_configurations (metric)",
+        )
+        .execute(&self.pool)
+        .await?;
+        
+        sqlx::query(
+            "CREATE INDEX IF NOT EXISTS idx_alert_history_triggered_at ON alert_history (triggered_at)",
         )
         .execute(&self.pool)
         .await?;
@@ -352,6 +427,224 @@ impl DatabaseManager {
             oldest_timestamp,
             newest_timestamp,
         })
+    }
+    
+    /// 获取所有警报配置
+    pub async fn get_alert_configurations(&self) -> Result<Vec<AlertConfiguration>, sqlx::Error> {
+        let rows = sqlx::query(
+            "SELECT id, metric, condition, threshold, severity, enabled, notification_methods FROM alert_configurations"
+        )
+        .fetch_all(&self.pool)
+        .await?;
+        
+        let mut configurations = Vec::new();
+        
+        for row in rows {
+            let notification_methods_str: String = row.get("notification_methods");
+            let notification_methods: Vec<String> = serde_json::from_str(&notification_methods_str)
+                .unwrap_or_default();
+            
+            configurations.push(AlertConfiguration {
+                id: row.get("id"),
+                metric: row.get("metric"),
+                condition: row.get("condition"),
+                threshold: row.get("threshold"),
+                severity: row.get("severity"),
+                enabled: row.get("enabled"),
+                notification_methods,
+            });
+        }
+        
+        Ok(configurations)
+    }
+    
+    /// 添加警报配置
+    pub async fn add_alert_configuration(&self, config: &AlertConfiguration) -> Result<String, sqlx::Error> {
+        let id = Uuid::new_v4().to_string();
+        let notification_methods_json = serde_json::to_string(&config.notification_methods)
+            .unwrap_or_else(|_| "[]".to_string());
+        
+        sqlx::query(
+            r#"
+            INSERT INTO alert_configurations (id, metric, condition, threshold, severity, enabled, notification_methods)
+            VALUES (?, ?, ?, ?, ?, ?, ?)
+            "#,
+        )
+        .bind(&id)
+        .bind(&config.metric)
+        .bind(&config.condition)
+        .bind(config.threshold)
+        .bind(&config.severity)
+        .bind(config.enabled)
+        .bind(&notification_methods_json)
+        .execute(&self.pool)
+        .await?;
+        
+        Ok(id)
+    }
+    
+    /// 更新警报配置
+    pub async fn update_alert_configuration(&self, id: &str, config: &AlertConfiguration) -> Result<(), sqlx::Error> {
+        let notification_methods_json = serde_json::to_string(&config.notification_methods)
+            .unwrap_or_else(|_| "[]".to_string());
+        
+        sqlx::query(
+            r#"
+            UPDATE alert_configurations
+            SET metric = ?, condition = ?, threshold = ?, severity = ?, enabled = ?, notification_methods = ?, updated_at = CURRENT_TIMESTAMP
+            WHERE id = ?
+            "#,
+        )
+        .bind(&config.metric)
+        .bind(&config.condition)
+        .bind(config.threshold)
+        .bind(&config.severity)
+        .bind(config.enabled)
+        .bind(&notification_methods_json)
+        .bind(id)
+        .execute(&self.pool)
+        .await?;
+        
+        Ok(())
+    }
+    
+    /// 删除警报配置
+    pub async fn delete_alert_configuration(&self, id: &str) -> Result<(), sqlx::Error> {
+        sqlx::query("DELETE FROM alert_configurations WHERE id = ?")
+            .bind(id)
+            .execute(&self.pool)
+            .await?;
+        
+        Ok(())
+    }
+    
+    /// 获取警报历史
+    pub async fn get_alert_history(&self, limit: u32, offset: u32) -> Result<Vec<AlertHistory>, sqlx::Error> {
+        let rows = sqlx::query(
+            r#"
+            SELECT id, alert_id, triggered_at, value, message, acknowledged, acknowledged_at, acknowledged_by
+            FROM alert_history
+            ORDER BY triggered_at DESC
+            LIMIT ? OFFSET ?
+            "#,
+        )
+        .bind(limit)
+        .bind(offset)
+        .fetch_all(&self.pool)
+        .await?;
+        
+        let mut history = Vec::new();
+        
+        for row in rows {
+            let triggered_at_str: String = row.get("triggered_at");
+            let triggered_at = DateTime::parse_from_rfc3339(&triggered_at_str)
+                .map(|dt| dt.with_timezone(&Utc))
+                .unwrap_or_else(|_| Utc::now());
+            
+            let acknowledged_at_str: Option<String> = row.get("acknowledged_at");
+            let acknowledged_at = acknowledged_at_str
+                .and_then(|ts| DateTime::parse_from_rfc3339(&ts).ok())
+                .map(|dt| dt.with_timezone(&Utc));
+            
+            history.push(AlertHistory {
+                id: row.get("id"),
+                alert_id: row.get("alert_id"),
+                triggered_at,
+                value: row.get("value"),
+                message: row.get("message"),
+                acknowledged: row.get("acknowledged"),
+                acknowledged_at,
+                acknowledged_by: row.get("acknowledged_by"),
+            });
+        }
+        
+        Ok(history)
+    }
+    
+    /// 确认警报
+    pub async fn acknowledge_alert(&self, id: &str, acknowledged_by: &str) -> Result<(), sqlx::Error> {
+        sqlx::query(
+            r#"
+            UPDATE alert_history
+            SET acknowledged = 1, acknowledged_at = CURRENT_TIMESTAMP, acknowledged_by = ?
+            WHERE id = ?
+            "#,
+        )
+        .bind(acknowledged_by)
+        .bind(id)
+        .execute(&self.pool)
+        .await?;
+        
+        Ok(())
+    }
+    
+    /// 检查警报
+    pub async fn check_alerts(&self, cpu_usage: f32, memory_usage: f32, disk_usage: f32, network_traffic: f64) -> Result<Vec<AlertHistory>, sqlx::Error> {
+        let configurations = self.get_alert_configurations().await?;
+        let mut triggered_alerts = Vec::new();
+        
+        for config in configurations {
+            if !config.enabled {
+                continue;
+            }
+            
+            let value = match config.metric.as_str() {
+                "cpu" => cpu_usage as f64,
+                "memory" => memory_usage as f64,
+                "disk" => disk_usage as f64,
+                "network" => network_traffic,
+                _ => continue,
+            };
+            
+            let should_trigger = match config.condition.as_str() {
+                ">" => value > config.threshold,
+                "<" => value < config.threshold,
+                ">=" => value >= config.threshold,
+                "<=" => value <= config.threshold,
+                "==" => value == config.threshold,
+                _ => false,
+            };
+            
+            if should_trigger {
+                let alert_id = Uuid::new_v4().to_string();
+                let message = format!(
+                    "{} alert triggered: {} {} {} (current: {}, threshold: {})",
+                    config.severity,
+                    config.metric,
+                    config.condition,
+                    config.threshold,
+                    value,
+                    config.threshold
+                );
+                
+                sqlx::query(
+                    r#"
+                    INSERT INTO alert_history (id, alert_id, triggered_at, value, message)
+                    VALUES (?, ?, ?, ?, ?)
+                    "#,
+                )
+                .bind(&alert_id)
+                .bind(&config.id)
+                .bind(Utc::now().to_rfc3339())
+                .bind(value)
+                .bind(&message)
+                .execute(&self.pool)
+                .await?;
+                
+                triggered_alerts.push(AlertHistory {
+                    id: alert_id,
+                    alert_id: config.id,
+                    triggered_at: Utc::now(),
+                    value,
+                    message,
+                    acknowledged: false,
+                    acknowledged_at: None,
+                    acknowledged_by: None,
+                });
+            }
+        }
+        
+        Ok(triggered_alerts)
     }
 }
 

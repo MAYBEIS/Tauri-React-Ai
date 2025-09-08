@@ -2,7 +2,7 @@
  * @Author: Maybe 1913093102@qq.com
  * @Date: 2025-09-02 17:07:48
  * @LastEditors: Maybe 1913093102@qq.com
- * @LastEditTime: 2025-09-08 09:53:38
+ * @LastEditTime: 2025-09-08 10:45:15
  * @FilePath: \Tauri-React-Ai\src\lib\api.ts
  * @Description: API服务层，封装所有IPC调用
  */
@@ -83,6 +83,48 @@ export interface NetworkStatus {
   interfaces: NetworkInterface[];
   local_ip?: string;
   public_ip?: string;
+}
+
+// 网络连接信息类型
+export interface NetworkConnectionInfo {
+  local_address: string;
+  local_port: number;
+  remote_address?: string;
+  remote_port?: number;
+  protocol: string;
+  state: string;
+  pid?: number;
+  process_name?: string;
+}
+
+// 网络诊断结果类型
+export interface NetworkDiagnosticsResult {
+  success: boolean;
+  message: string;
+  latency_ms?: number;
+  packet_loss_percent?: number;
+  hops?: NetworkHop[];
+}
+
+// 网络跃点信息类型
+export interface NetworkHop {
+  hop_number: number;
+  address: string;
+  hostname?: string;
+  latency_ms?: number;
+  packet_loss_percent?: number;
+}
+
+// 警报历史类型
+export interface AlertHistory {
+  id: string;
+  alert_id: string;
+  triggered_at: string;
+  value: number;
+  message: string;
+  acknowledged: boolean;
+  acknowledged_at?: string;
+  acknowledged_by?: string;
 }
 
 // 音频设备类型
@@ -205,6 +247,34 @@ export interface ProcessInfo {
   working_directory?: string;
 }
 
+// 进程详细信息类型
+export interface ProcessDetails {
+  pid: string;
+  name: string;
+  path?: string;
+  command_line?: string;
+  exe?: string;
+  cpu_usage_percent: number;
+  memory_usage_bytes: number;
+  thread_count: number;
+  priority: number;
+  status: string;
+  start_time?: string;
+  user?: string;
+  parent_pid?: string;
+  working_directory?: string;
+}
+
+// 进程排序选项类型
+export interface ProcessSortOptions {
+  sort_by: string;
+  sort_order: string; // "asc" or "desc"
+  filter_name?: string;
+  filter_user?: string;
+  min_cpu_usage?: number;
+  max_memory_usage?: number;
+}
+
 // API服务类
 export class SystemMonitorAPI {
   // 基本问候命令
@@ -237,6 +307,21 @@ export class SystemMonitorAPI {
     return await invoke('get_network_status');
   }
 
+  // 获取网络连接列表
+  static async getNetworkConnections(): Promise<NetworkConnectionInfo[]> {
+    return await invoke('get_network_connections');
+  }
+
+  // 执行网络诊断（Ping）
+  static async diagnoseNetworkPing(host: string, count?: number): Promise<NetworkDiagnosticsResult> {
+    return await invoke('diagnose_network_ping', { host, count });
+  }
+
+  // 执行网络诊断（Traceroute）
+  static async diagnoseNetworkTraceroute(host: string): Promise<NetworkDiagnosticsResult> {
+    return await invoke('diagnose_network_traceroute', { host });
+  }
+
   // 获取音频设备列表
   static async getAudioDevices(): Promise<AudioDevice[]> {
     return await invoke('get_audio_devices');
@@ -255,6 +340,21 @@ export class SystemMonitorAPI {
   // 获取进程列表
   static async getProcesses(): Promise<ProcessInfo[]> {
     return await invoke('get_processes');
+  }
+
+  // 获取进程列表（增强版）
+  static async getProcessesEnhanced(sortOptions?: ProcessSortOptions): Promise<ProcessDetails[]> {
+    return await invoke('get_processes_enhanced', { sort_options: sortOptions });
+  }
+
+  // 获取进程详细信息
+  static async getProcessDetails(pid: string): Promise<ProcessDetails> {
+    return await invoke('get_process_details', { pid });
+  }
+
+  // 终止进程
+  static async terminateProcess(pid: string, force: boolean = false): Promise<string> {
+    return await invoke('terminate_process', { pid, force });
   }
 
   // 获取GPU信息
@@ -316,6 +416,51 @@ export class SystemMonitorAPI {
   // 初始化数据库
   static async initDatabase(): Promise<void> {
     return await invoke('init_database');
+  }
+
+  // 获取所有警报配置
+  static async getAlertConfigurations(): Promise<AlertConfiguration[]> {
+    return await invoke('get_alert_configurations');
+  }
+
+  // 添加警报配置
+  static async addAlertConfiguration(config: AlertConfiguration): Promise<string> {
+    return await invoke('add_alert_configuration', { config });
+  }
+
+  // 更新警报配置
+  static async updateAlertConfiguration(id: string, config: AlertConfiguration): Promise<void> {
+    return await invoke('update_alert_configuration', { id, config });
+  }
+
+  // 删除警报配置
+  static async deleteAlertConfiguration(id: string): Promise<void> {
+    return await invoke('delete_alert_configuration', { id });
+  }
+
+  // 获取警报历史
+  static async getAlertHistory(limit?: number, offset?: number): Promise<AlertHistory[]> {
+    return await invoke('get_alert_history', { limit, offset });
+  }
+
+  // 确认警报
+  static async acknowledgeAlert(id: string, acknowledgedBy: string): Promise<void> {
+    return await invoke('acknowledge_alert', { id, acknowledged_by: acknowledgedBy });
+  }
+
+  // 检查警报
+  static async checkAlerts(metrics: {
+    cpu_usage: number;
+    memory_usage: number;
+    disk_usage: number;
+    network_traffic: number;
+  }): Promise<AlertHistory[]> {
+    return await invoke('check_alerts', {
+      cpu_usage: metrics.cpu_usage,
+      memory_usage: metrics.memory_usage,
+      disk_usage: metrics.disk_usage,
+      network_traffic: metrics.network_traffic,
+    });
   }
 }
 

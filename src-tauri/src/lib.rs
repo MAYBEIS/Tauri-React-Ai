@@ -439,43 +439,852 @@ fn get_uptime(_state: State<SystemState>) -> Result<u64, String> {
     Ok(System::uptime())
 }
 
-// 获取进程列表
+// 网络连接信息结构体
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct NetworkConnectionInfo {
+    pub local_address: String,
+    pub local_port: u16,
+    pub remote_address: Option<String>,
+    pub remote_port: Option<u16>,
+    pub protocol: String,
+    pub state: String,
+    pub pid: Option<u32>,
+    pub process_name: Option<String>,
+}
+
+// 网络诊断结果结构体
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct NetworkDiagnosticsResult {
+    pub success: bool,
+    pub message: String,
+    pub latency_ms: Option<f64>,
+    pub packet_loss_percent: Option<f32>,
+    pub hops: Option<Vec<NetworkHop>>,
+}
+
+// 网络跃点信息结构体
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct NetworkHop {
+    pub hop_number: u32,
+    pub address: String,
+    pub hostname: Option<String>,
+    pub latency_ms: Option<f64>,
+    pub packet_loss_percent: Option<f32>,
+}
+
+// 获取网络连接列表
+#[tauri::command]
+async fn get_network_connections(_state: State<'_, SystemState>) -> Result<Vec<NetworkConnectionInfo>, String> {
+    // 在后台线程执行网络连接信息收集
+    let connections = tokio::task::spawn_blocking(|| {
+        let mut connections = Vec::new();
+        
+        // 使用系统命令获取网络连接信息
+        let output = if cfg!(target_os = "windows") {
+            Command::new("netstat")
+                .args(["-ano"])
+                .output()
+        } else {
+            // Unix/Linux系统
+            Command::new("netstat")
+                .args(["-tunlp"])
+                .output()
+        };
+        
+        match output {
+            Ok(result) => {
+                if result.status.success() {
+                    let stdout_str = String::from_utf8_lossy(&result.stdout);
+                    connections = parse_network_connections(&stdout_str);
+                }
+            },
+            Err(_) => {
+                // 如果无法执行命令，返回空向量
+            }
+        }
+        
+        connections
+    }).await;
+    
+    match connections {
+        Ok(conns) => Ok(conns),
+        Err(e) => Err(format!("获取网络连接列表时发生错误: {}", e)),
+    }
+}
+
+// 解析网络连接信息
+fn parse_network_connections(output: &str) -> Vec<NetworkConnectionInfo> {
+    let mut connections = Vec::new();
+    let lines: Vec<&str> = output.lines().collect();
+    
+    // 跳过标题行
+    for line in lines.iter().skip(4) {
+        let trimmed_line = line.trim();
+        if trimmed_line.is_empty() {
+            continue;
+        }
+        
+        // Windows netstat -ano 输出格式
+        if cfg!(target_os = "windows") {
+            if let Some(connection) = parse_windows_netstat_line(trimmed_line) {
+                connections.push(connection);
+            }
+        } else {
+            // Unix/Linux netstat -tunlp 输出格式
+            if let Some(connection) = parse_unix_netstat_line(trimmed_line) {
+                connections.push(connection);
+            }
+        }
+    }
+    
+    connections
+}
+
+// 解析Windows netstat行
+fn parse_windows_netstat_line(line: &str) -> Option<NetworkConnectionInfo> {
+    let parts: Vec<&str> = line.split_whitespace().collect();
+    if parts.len() < 4 {
+        return None;
+    }
+    
+    let protocol = parts[0].to_string();
+    let local_address_parts: Vec<&str> = parts[1].split(':').collect();
+    let remote_address_parts: Vec<&str> = parts[2].split(':').collect();
+    let state = parts[3].to_string();
+    let pid = parts.get(4).and_then(|s| s.parse::<u32>().ok());
+    
+    let local_address = local_address_parts.get(0).unwrap_or(&"").to_string();
+    let local_port = local_address_parts.get(1).unwrap_or(&"0").parse::<u16>().unwrap_or(0);
+    
+    let remote_address = if remote_address_parts.len() > 0 && !remote_address_parts[0].is_empty() {
+        Some(remote_address_parts.get(0).unwrap_or(&"").to_string())
+    } else {
+        None
+    };
+    
+    let remote_port = if remote_address_parts.len() > 1 {
+        remote_address_parts.get(1).unwrap_or(&"0").parse::<u16>().ok()
+    } else {
+        None
+    };
+    
+    Some(NetworkConnectionInfo {
+        local_address,
+        local_port,
+        remote_address,
+        remote_port,
+        protocol,
+        state,
+        pid,
+        process_name: None, // 需要额外查询进程名称
+    })
+}
+
+// 解析Unix/Linux netstat行
+fn parse_unix_netstat_line(line: &str) -> Option<NetworkConnectionInfo> {
+    let parts: Vec<&str> = line.split_whitespace().collect();
+    if parts.len() < 6 {
+        return None;
+    }
+    
+    let protocol = parts[0].to_string();
+    let (local_address, local_port) = parse_address_port(parts[3]);
+    let (remote_address, remote_port) = parse_address_port(parts[4]);
+    let state = parts[5].to_string();
+    
+    // 解析PID和进程名称
+    let mut pid = None;
+    let mut process_name = None;
+    
+    if let Some(pid_program) = parts.get(6) {
+        if let Some(pid_str) = pid_program.split('/').next() {
+            pid = pid_str.parse::<u32>().ok();
+            process_name = pid_program.strip_prefix(pid_str).map(|s| s.trim_start_matches('/').to_string());
+        }
+    }
+    
+    Some(NetworkConnectionInfo {
+        local_address,
+        local_port,
+        remote_address: Some(remote_address),
+        remote_port: Some(remote_port),
+        protocol,
+        state,
+        pid,
+        process_name,
+    })
+}
+
+// 解析地址和端口
+fn parse_address_port(addr_port: &str) -> (String, u16) {
+    let parts: Vec<&str> = addr_port.split(':').collect();
+    if parts.len() >= 2 {
+        let address = parts[0..parts.len()-1].join(":");
+        let port = parts[parts.len()-1].parse::<u16>().unwrap_or(0);
+        (address, port)
+    } else {
+        (addr_port.to_string(), 0)
+    }
+}
+
+// 执行网络诊断（Ping）
+#[tauri::command]
+async fn diagnose_network_ping(_state: State<'_, SystemState>, host: String, count: Option<u32>) -> Result<NetworkDiagnosticsResult, String> {
+    let ping_count = count.unwrap_or(4);
+    
+    // 在后台线程执行网络诊断
+    let result = tokio::task::spawn_blocking(move || {
+        let output = if cfg!(target_os = "windows") {
+            Command::new("ping")
+                .args(["-n", &ping_count.to_string(), "-w", "5000", &host])
+                .output()
+        } else {
+            Command::new("ping")
+                .args(["-c", &ping_count.to_string(), "-W", "5", &host])
+                .output()
+        };
+        
+        match output {
+            Ok(result) => {
+                if result.status.success() {
+                    let stdout_str = String::from_utf8_lossy(&result.stdout);
+                    parse_ping_result(&stdout_str, ping_count)
+                } else {
+                    let stderr_str = String::from_utf8_lossy(&result.stderr);
+                    Ok(NetworkDiagnosticsResult {
+                        success: false,
+                        message: format!("Ping失败: {}", stderr_str),
+                        latency_ms: None,
+                        packet_loss_percent: None,
+                        hops: None,
+                    })
+                }
+            },
+            Err(e) => Ok(NetworkDiagnosticsResult {
+                success: false,
+                message: format!("无法执行ping命令: {}", e),
+                latency_ms: None,
+                packet_loss_percent: None,
+                hops: None,
+            })
+        }
+    }).await;
+    
+    match result {
+        Ok(res) => res,
+        Err(e) => Err(format!("执行网络诊断时发生错误: {}", e)),
+    }
+}
+
+// 解析ping结果
+fn parse_ping_result(output: &str, _count: u32) -> Result<NetworkDiagnosticsResult, String> {
+    // 在Windows上查找类似 "平均 = 15ms" 的模式
+    if cfg!(target_os = "windows") {
+        if let Some(avg_latency) = extract_windows_ping_avg_latency(output) {
+            let packet_loss = extract_windows_ping_packet_loss(output).unwrap_or(0.0);
+            
+            return Ok(NetworkDiagnosticsResult {
+                success: true,
+                message: "Ping成功".to_string(),
+                latency_ms: Some(avg_latency),
+                packet_loss_percent: Some(packet_loss),
+                hops: None,
+            });
+        }
+    }
+    
+    // 在Unix/Linux上查找类似 "rtt min/avg/max/mdev = 10.123/15.456/20.789/5.123 ms" 的模式
+    if let Some(avg_latency) = extract_unix_ping_avg_latency(output) {
+        let packet_loss = extract_unix_ping_packet_loss(output).unwrap_or(0.0);
+        
+        return Ok(NetworkDiagnosticsResult {
+            success: true,
+            message: "Ping成功".to_string(),
+            latency_ms: Some(avg_latency),
+            packet_loss_percent: Some(packet_loss),
+            hops: None,
+        });
+    }
+    
+    // 如果无法解析，返回原始输出
+    Err(format!("无法解析ping结果: {}", &output[..100.min(output.len())]))
+}
+
+// 提取Windows ping平均延迟
+fn extract_windows_ping_avg_latency(output: &str) -> Option<f64> {
+    if let Some(pos) = output.find("平均 = ") {
+        if let Some(end_pos) = output[pos..].find("ms") {
+            let latency_str = &output[pos + 5..pos + end_pos];
+            return latency_str.trim().parse::<f64>().ok();
+        }
+    }
+    None
+}
+
+// 提取Windows ping丢包率
+fn extract_windows_ping_packet_loss(output: &str) -> Option<f32> {
+    if let Some(pos) = output.find("(") {
+        if let Some(end_pos) = output[pos..].find("%") {
+            let loss_str = &output[pos + 1..pos + end_pos];
+            return loss_str.trim().parse::<f32>().ok();
+        }
+    }
+    None
+}
+
+// 提取Unix/Linux ping平均延迟
+fn extract_unix_ping_avg_latency(output: &str) -> Option<f64> {
+    if let Some(pos) = output.find("rtt min/avg/max/mdev = ") {
+        if let Some(end_pos) = output[pos..].find(" ms") {
+            let rtt_part = &output[pos + 21..pos + end_pos];
+            let parts: Vec<&str> = rtt_part.split('/').collect();
+            if parts.len() >= 2 {
+                return parts[1].trim().parse::<f64>().ok();
+            }
+        }
+    }
+    None
+}
+
+// 提取Unix/Linux ping丢包率
+fn extract_unix_ping_packet_loss(output: &str) -> Option<f32> {
+    if let Some(pos) = output.find("packet loss") {
+        let before = &output[..pos];
+        if let Some(last_space) = before.rfind(' ') {
+            let loss_str = &before[last_space + 1..];
+            return loss_str.trim_end_matches('%').parse::<f32>().ok();
+        }
+    }
+    None
+}
+
+// 执行网络诊断（Traceroute）
+#[tauri::command]
+async fn diagnose_network_traceroute(_state: State<'_, SystemState>, host: String) -> Result<NetworkDiagnosticsResult, String> {
+    // 在后台线程执行网络诊断
+    let result = tokio::task::spawn_blocking(move || {
+        let output = if cfg!(target_os = "windows") {
+            Command::new("tracert")
+                .args([&host])
+                .output()
+        } else {
+            Command::new("traceroute")
+                .args([&host])
+                .output()
+        };
+        
+        match output {
+            Ok(result) => {
+                let stdout_str = String::from_utf8_lossy(&result.stdout);
+                let stderr_str = String::from_utf8_lossy(&result.stderr);
+                
+                if result.status.success() || !stdout_str.is_empty() {
+                    parse_traceroute_result(&stdout_str)
+                } else {
+                    Ok(NetworkDiagnosticsResult {
+                        success: false,
+                        message: format!("Traceroute失败: {}", stderr_str),
+                        latency_ms: None,
+                        packet_loss_percent: None,
+                        hops: None,
+                    })
+                }
+            },
+            Err(e) => Ok(NetworkDiagnosticsResult {
+                success: false,
+                message: format!("无法执行traceroute命令: {}", e),
+                latency_ms: None,
+                packet_loss_percent: None,
+                hops: None,
+            })
+        }
+    }).await;
+    
+    match result {
+        Ok(res) => res,
+        Err(e) => Err(format!("执行网络诊断时发生错误: {}", e)),
+    }
+}
+
+// 解析traceroute结果
+fn parse_traceroute_result(output: &str) -> Result<NetworkDiagnosticsResult, String> {
+    let mut hops = Vec::new();
+    let lines: Vec<&str> = output.lines().collect();
+    
+    for line in lines.iter() {
+        if let Some(hop) = parse_traceroute_hop(line) {
+            hops.push(hop);
+        }
+    }
+    
+    if hops.is_empty() {
+        return Err(format!("无法解析traceroute结果: {}", &output[..100.min(output.len())]));
+    }
+    
+    Ok(NetworkDiagnosticsResult {
+        success: true,
+        message: "Traceroute成功".to_string(),
+        latency_ms: None,
+        packet_loss_percent: None,
+        hops: Some(hops),
+    })
+}
+
+// 解析traceroute跃点
+fn parse_traceroute_hop(line: &str) -> Option<NetworkHop> {
+    let trimmed_line = line.trim();
+    if trimmed_line.is_empty() {
+        return None;
+    }
+    
+    // Windows tracert格式
+    if cfg!(target_os = "windows") {
+        if let Some(hop_number) = extract_windows_tracert_hop_number(trimmed_line) {
+            let (address, hostname, latency) = extract_windows_tracert_hop_info(trimmed_line);
+            
+            return Some(NetworkHop {
+                hop_number,
+                address,
+                hostname,
+                latency_ms: latency,
+                packet_loss_percent: None,
+            });
+        }
+    }
+    
+    // Unix/Linux traceroute格式
+    if let Some(hop_number) = extract_unix_traceroute_hop_number(trimmed_line) {
+        let (address, hostname, latency) = extract_unix_traceroute_hop_info(trimmed_line);
+        
+        return Some(NetworkHop {
+            hop_number,
+            address,
+            hostname,
+            latency_ms: latency,
+            packet_loss_percent: None,
+        });
+    }
+    
+    None
+}
+
+// 提取Windows tracert跃点编号
+fn extract_windows_tracert_hop_number(line: &str) -> Option<u32> {
+    let parts: Vec<&str> = line.split_whitespace().collect();
+    if parts.len() >= 2 {
+        return parts[0].parse::<u32>().ok();
+    }
+    None
+}
+
+// 提取Windows tracert跃点信息
+fn extract_windows_tracert_hop_info(line: &str) -> (String, Option<String>, Option<f64>) {
+    let parts: Vec<&str> = line.split_whitespace().collect();
+    
+    if parts.len() >= 3 {
+        let address = parts[1].to_string();
+        let hostname = if parts.len() >= 4 && !parts[2].starts_with('[') {
+            Some(parts[2].to_string())
+        } else {
+            None
+        };
+        
+        // 查找延迟信息
+        let latency = parts.iter()
+            .find(|p| p.ends_with("ms"))
+            .and_then(|p| p.replace("ms", "").parse::<f64>().ok());
+        
+        (address, hostname, latency)
+    } else {
+        ("unknown".to_string(), None, None)
+    }
+}
+
+// 提取Unix/Linux traceroute跃点编号
+fn extract_unix_traceroute_hop_number(line: &str) -> Option<u32> {
+    let parts: Vec<&str> = line.split_whitespace().collect();
+    if parts.len() >= 2 {
+        return parts[0].parse::<u32>().ok();
+    }
+    None
+}
+
+// 提取Unix/Linux traceroute跃点信息
+fn extract_unix_traceroute_hop_info(line: &str) -> (String, Option<String>, Option<f64>) {
+    let parts: Vec<&str> = line.split_whitespace().collect();
+    
+    if parts.len() >= 3 {
+        let address = parts[1].to_string();
+        let hostname = if parts.len() >= 4 && parts[2].starts_with('(') && parts[2].ends_with(')') {
+            Some(parts[2].trim_start_matches('(').trim_end_matches(')').to_string())
+        } else {
+            None
+        };
+        
+        // 查找延迟信息
+        let latency = parts.iter()
+            .find(|p| p.ends_with("ms"))
+            .and_then(|p| p.replace("ms", "").parse::<f64>().ok());
+        
+        (address, hostname, latency)
+    } else {
+        ("unknown".to_string(), None, None)
+    }
+}
+
+// 重新导出数据库模块中的类型
+pub use database::{AlertConfiguration, AlertHistory};
+
+// 获取所有警报配置
+#[tauri::command]
+async fn get_alert_configurations(
+    state: State<'_, SystemState>,
+) -> Result<Vec<AlertConfiguration>, String> {
+    let db_manager = state.db_manager.as_ref()
+        .ok_or_else(|| "Database not initialized".to_string())?;
+    
+    db_manager.get_alert_configurations()
+        .await
+        .map_err(|e| format!("Failed to get alert configurations: {}", e))
+}
+
+// 添加警报配置
+#[tauri::command]
+async fn add_alert_configuration(
+    state: State<'_, SystemState>,
+    config: AlertConfiguration,
+) -> Result<String, String> {
+    let db_manager = state.db_manager.as_ref()
+        .ok_or_else(|| "Database not initialized".to_string())?;
+    
+    db_manager.add_alert_configuration(&config)
+        .await
+        .map_err(|e| format!("Failed to add alert configuration: {}", e))
+}
+
+// 更新警报配置
+#[tauri::command]
+async fn update_alert_configuration(
+    state: State<'_, SystemState>,
+    id: String,
+    config: AlertConfiguration,
+) -> Result<(), String> {
+    let db_manager = state.db_manager.as_ref()
+        .ok_or_else(|| "Database not initialized".to_string())?;
+    
+    db_manager.update_alert_configuration(&id, &config)
+        .await
+        .map_err(|e| format!("Failed to update alert configuration: {}", e))
+}
+
+// 删除警报配置
+#[tauri::command]
+async fn delete_alert_configuration(
+    state: State<'_, SystemState>,
+    id: String,
+) -> Result<(), String> {
+    let db_manager = state.db_manager.as_ref()
+        .ok_or_else(|| "Database not initialized".to_string())?;
+    
+    db_manager.delete_alert_configuration(&id)
+        .await
+        .map_err(|e| format!("Failed to delete alert configuration: {}", e))
+}
+
+// 获取警报历史
+#[tauri::command]
+async fn get_alert_history(
+    state: State<'_, SystemState>,
+    limit: Option<u32>,
+    offset: Option<u32>,
+) -> Result<Vec<AlertHistory>, String> {
+    let db_manager = state.db_manager.as_ref()
+        .ok_or_else(|| "Database not initialized".to_string())?;
+    
+    db_manager.get_alert_history(limit.unwrap_or(100), offset.unwrap_or(0))
+        .await
+        .map_err(|e| format!("Failed to get alert history: {}", e))
+}
+
+// 确认警报
+#[tauri::command]
+async fn acknowledge_alert(
+    state: State<'_, SystemState>,
+    id: String,
+    acknowledged_by: String,
+) -> Result<(), String> {
+    let db_manager = state.db_manager.as_ref()
+        .ok_or_else(|| "Database not initialized".to_string())?;
+    
+    db_manager.acknowledge_alert(&id, &acknowledged_by)
+        .await
+        .map_err(|e| format!("Failed to acknowledge alert: {}", e))
+}
+
+// 检查警报
+#[tauri::command]
+async fn check_alerts(
+    state: State<'_, SystemState>,
+    cpu_usage: f32,
+    memory_usage: f32,
+    disk_usage: f32,
+    network_traffic: f64,
+) -> Result<Vec<AlertHistory>, String> {
+    let db_manager = state.db_manager.as_ref()
+        .ok_or_else(|| "Database not initialized".to_string())?;
+    
+    db_manager.check_alerts(cpu_usage, memory_usage, disk_usage, network_traffic)
+        .await
+        .map_err(|e| format!("Failed to check alerts: {}", e))
+}
+
+// 进程详细信息结构体
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct ProcessDetails {
+    pub pid: String,
+    pub name: String,
+    pub path: Option<String>,
+    pub command_line: String,
+    pub exe: Option<String>,
+    pub cpu_usage_percent: f32,
+    pub memory_usage_bytes: u64,
+    pub thread_count: u32,
+    pub priority: i32,
+    pub status: String,
+    pub start_time: Option<String>,
+    pub user: Option<String>,
+    pub parent_pid: Option<String>,
+    pub working_directory: Option<String>,
+}
+
+// 进程排序选项
+#[derive(Debug, Serialize, Deserialize)]
+pub struct ProcessSortOptions {
+    pub sort_by: String,
+    pub sort_order: String, // "asc" or "desc"
+    pub filter_name: Option<String>,
+    pub filter_user: Option<String>,
+    pub min_cpu_usage: Option<f32>,
+    pub max_memory_usage: Option<u64>,
+}
+
+// 获取进程列表（增强版）
+#[tauri::command]
+async fn get_processes_enhanced(
+    _state: State<'_, SystemState>,
+    sort_options: Option<ProcessSortOptions>,
+) -> Result<Vec<ProcessDetails>, String> {
+    // 在后台线程执行进程信息收集
+    let processes = tokio::task::spawn_blocking(move || {
+        let mut sys = System::new_all();
+        sys.refresh_all();
+        
+        let mut processes = Vec::new();
+        
+        for (pid, process) in sys.processes() {
+            let process_details = ProcessDetails {
+                pid: pid.as_u32().to_string(),
+                name: process.name().to_string(),
+                path: process.exe().map(|p| p.to_string_lossy().to_string()),
+                command_line: process.cmd().join(" "),
+                exe: process.exe().map(|p| p.to_string_lossy().to_string()),
+                cpu_usage_percent: process.cpu_usage(),
+                memory_usage_bytes: process.memory(),
+                thread_count: 0, // sysinfo crate doesn't have threads() method in Process
+                priority: 0, // sysinfo crate doesn't have priority() method in Process
+                status: format!("{:?}", process.status()),
+                start_time: Some(process.start_time().to_string()),
+                user: process.user_id().map(|uid| uid.to_string()),
+                parent_pid: process.parent().map(|p| p.as_u32().to_string()),
+                working_directory: process.cwd().map(|p| p.to_string_lossy().to_string()),
+            };
+            
+            processes.push(process_details);
+        }
+        
+        // 应用过滤和排序
+        if let Some(options) = sort_options {
+            // 过滤
+            if let Some(filter_name) = &options.filter_name {
+                processes.retain(|p| p.name.to_lowercase().contains(&filter_name.to_lowercase()));
+            }
+            
+            if let Some(filter_user) = &options.filter_user {
+                processes.retain(|p| p.user.as_ref().map_or(false, |user| user.contains(filter_user)));
+            }
+            
+            if let Some(min_cpu) = options.min_cpu_usage {
+                processes.retain(|p| p.cpu_usage_percent >= min_cpu);
+            }
+            
+            if let Some(max_memory) = options.max_memory_usage {
+                processes.retain(|p| p.memory_usage_bytes <= max_memory);
+            }
+            
+            // 排序
+            match options.sort_by.as_str() {
+                "name" => {
+                    if options.sort_order == "desc" {
+                        processes.sort_by(|a, b| b.name.cmp(&a.name));
+                    } else {
+                        processes.sort_by(|a, b| a.name.cmp(&b.name));
+                    }
+                },
+                "cpu" => {
+                    if options.sort_order == "desc" {
+                        processes.sort_by(|a, b| b.cpu_usage_percent.partial_cmp(&a.cpu_usage_percent).unwrap_or(std::cmp::Ordering::Equal));
+                    } else {
+                        processes.sort_by(|a, b| a.cpu_usage_percent.partial_cmp(&b.cpu_usage_percent).unwrap_or(std::cmp::Ordering::Equal));
+                    }
+                },
+                "memory" => {
+                    if options.sort_order == "desc" {
+                        processes.sort_by(|a, b| b.memory_usage_bytes.cmp(&a.memory_usage_bytes));
+                    } else {
+                        processes.sort_by(|a, b| a.memory_usage_bytes.cmp(&b.memory_usage_bytes));
+                    }
+                },
+                "pid" => {
+                    if options.sort_order == "desc" {
+                        processes.sort_by(|a, b| b.pid.cmp(&a.pid));
+                    } else {
+                        processes.sort_by(|a, b| a.pid.cmp(&b.pid));
+                    }
+                },
+                _ => {
+                    // 默认按CPU使用率降序排序
+                    processes.sort_by(|a, b| b.cpu_usage_percent.partial_cmp(&a.cpu_usage_percent).unwrap_or(std::cmp::Ordering::Equal));
+                }
+            }
+        }
+        
+        processes
+    }).await;
+    
+    match processes {
+        Ok(procs) => Ok(procs),
+        Err(e) => Err(format!("获取进程列表时发生错误: {}", e)),
+    }
+}
+
+// 获取进程详细信息
+#[tauri::command]
+async fn get_process_details(_state: State<'_, SystemState>, pid: String) -> Result<ProcessDetails, String> {
+    // 在后台线程执行进程详细信息收集
+    let process_details = tokio::task::spawn_blocking(move || {
+        let mut sys = System::new_all();
+        sys.refresh_all();
+        
+        // 解析PID
+        let pid_num = pid.parse::<u32>().map_err(|_| "Invalid PID format".to_string())?;
+        let pid = sysinfo::Pid::from_u32(pid_num);
+        
+        // 查找进程
+        if let Some(process) = sys.process(pid) {
+            Ok(ProcessDetails {
+                pid: pid.as_u32().to_string(),
+                name: process.name().to_string(),
+                path: process.exe().map(|p| p.to_string_lossy().to_string()),
+                command_line: process.cmd().join(" "),
+                exe: process.exe().map(|p| p.to_string_lossy().to_string()),
+                cpu_usage_percent: process.cpu_usage(),
+                memory_usage_bytes: process.memory(),
+                thread_count: 0, // sysinfo crate doesn't have threads() method in Process
+                priority: 0, // sysinfo crate doesn't have priority() method in Process
+                status: format!("{:?}", process.status()),
+                start_time: Some(process.start_time().to_string()),
+                user: process.user_id().map(|uid| uid.to_string()),
+                parent_pid: process.parent().map(|p| p.as_u32().to_string()),
+                working_directory: process.cwd().map(|p| p.to_string_lossy().to_string()),
+            })
+        } else {
+            Err(format!("Process with PID {} not found", pid))
+        }
+    }).await;
+    
+    match process_details {
+        Ok(details) => details,
+        Err(e) => Err(format!("获取进程详细信息时发生错误: {}", e)),
+    }
+}
+
+// 终止进程
+#[tauri::command]
+async fn terminate_process(_state: State<'_, SystemState>, pid: String, force: bool) -> Result<String, String> {
+    // 在后台线程执行进程终止
+    let result = tokio::task::spawn_blocking(move || {
+        // 解析PID
+        let pid_num = pid.parse::<u32>().map_err(|_| "Invalid PID format".to_string())?;
+        
+        // 使用系统命令终止进程
+        let output = if cfg!(target_os = "windows") {
+            if force {
+                // 强制终止
+                Command::new("taskkill")
+                    .args(["/F", "/PID", &pid_num.to_string()])
+                    .output()
+            } else {
+                // 正常终止
+                Command::new("taskkill")
+                    .args(["/PID", &pid_num.to_string()])
+                    .output()
+            }
+        } else {
+            if force {
+                // Unix/Linux强制终止
+                Command::new("kill")
+                    .args(["-9", &pid_num.to_string()])
+                    .output()
+            } else {
+                // Unix/Linux正常终止
+                Command::new("kill")
+                    .args([&pid_num.to_string()])
+                    .output()
+            }
+        };
+        
+        match output {
+            Ok(result) => {
+                if result.status.success() {
+                    Ok(format!("Process {} terminated successfully", pid))
+                } else {
+                    let stderr_str = String::from_utf8_lossy(&result.stderr);
+                    let stdout_str = String::from_utf8_lossy(&result.stdout);
+                    Err(format!("Failed to terminate process {}: stdout={}, stderr={}", pid, stdout_str, stderr_str))
+                }
+            },
+            Err(e) => Err(format!("Failed to execute terminate command: {}", e)),
+        }
+    }).await;
+    
+    match result {
+        Ok(res) => res,
+        Err(e) => Err(format!("终止进程时发生错误: {}", e)),
+    }
+}
+
+// 保持向后兼容性的原始get_processes函数
 #[tauri::command]
 async fn get_processes(_state: State<'_, SystemState>) -> Result<Vec<HashMap<String, String>>, String> {
     // 在后台线程执行进程信息收集
     let processes = tokio::task::spawn_blocking(|| {
-        // 由于sysinfo库的API变化，暂时返回模拟数据
+        let mut sys = System::new_all();
+        sys.refresh_all();
+        
         let mut processes = Vec::new();
         
-        // 模拟一些进程数据
-        let mut process1 = HashMap::new();
-        let mut process2 = HashMap::new();
-        let mut process3 = HashMap::new();
-        
-        process1.insert("pid".to_string(), "1234".to_string());
-        process1.insert("name".to_string(), "chrome.exe".to_string());
-        process1.insert("cpu_usage".to_string(), "15.2".to_string());
-        process1.insert("memory_usage".to_string(), "1048576".to_string());
-        process1.insert("cmd".to_string(), "C:\\Program Files\\Chrome\\chrome.exe --profile-directory=Default".to_string());
-        process1.insert("exe".to_string(), "C:\\Program Files\\Chrome\\chrome.exe".to_string());
-        
-        process2.insert("pid".to_string(), "5678".to_string());
-        process2.insert("name".to_string(), "vscode.exe".to_string());
-        process2.insert("cpu_usage".to_string(), "8.5".to_string());
-        process2.insert("memory_usage".to_string(), "524288".to_string());
-        process2.insert("cmd".to_string(), "C:\\Program Files\\VSCode\\Code.exe --unity-launch".to_string());
-        process2.insert("exe".to_string(), "C:\\Program Files\\VSCode\\Code.exe".to_string());
-        
-        process3.insert("pid".to_string(), "9012".to_string());
-        process3.insert("name".to_string(), "spotify.exe".to_string());
-        process3.insert("cpu_usage".to_string(), "2.1".to_string());
-        process3.insert("memory_usage".to_string(), "262144".to_string());
-        process3.insert("cmd".to_string(), "C:\\Users\\User\\AppData\\Roaming\\Spotify\\Spotify.exe".to_string());
-        process3.insert("exe".to_string(), "C:\\Users\\User\\AppData\\Roaming\\Spotify\\Spotify.exe".to_string());
-        
-        processes.push(process1);
-        processes.push(process2);
-        processes.push(process3);
+        for (pid, process) in sys.processes() {
+            let mut process_map = HashMap::new();
+            
+            process_map.insert("pid".to_string(), pid.as_u32().to_string());
+            process_map.insert("name".to_string(), process.name().to_string());
+            process_map.insert("cpu_usage".to_string(), process.cpu_usage().to_string());
+            process_map.insert("memory_usage".to_string(), process.memory().to_string());
+            process_map.insert("cmd".to_string(), process.cmd().join(" "));
+            process_map.insert("exe".to_string(), process.exe().map(|p| p.to_string_lossy().to_string()).unwrap_or_default());
+            
+            processes.push(process_map);
+        }
         
         processes
     }).await;
@@ -761,7 +1570,20 @@ pub fn run() {
             ping_host,
             get_uptime,
             get_processes,
+            get_processes_enhanced,
+            get_process_details,
+            terminate_process,
             get_gpu_info,
+            get_network_connections,
+            diagnose_network_ping,
+            diagnose_network_traceroute,
+            get_alert_configurations,
+            add_alert_configuration,
+            update_alert_configuration,
+            delete_alert_configuration,
+            get_alert_history,
+            acknowledge_alert,
+            check_alerts,
             store_historical_data,
             fetch_historical_data,
             export_historical_data,

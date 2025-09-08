@@ -200,6 +200,136 @@ export class IPCTestUtils {
       },
     ];
   }
+
+  /**
+   * 模拟历史系统数据
+   */
+  static getMockHistoricalData() {
+    return {
+      cpu: Array.from({ length: 24 }, (_, i) => 20 + Math.sin(i / 3) * 20 + Math.random() * 10),
+      memory: Array.from({ length: 24 }, (_, i) => 40 + Math.cos(i / 4) * 15 + Math.random() * 10),
+      disk: Array.from({ length: 24 }, (_, i) => 30 + Math.sin(i / 5) * 10 + Math.random() * 5),
+      network: Array.from({ length: 24 }, (_, i) => 10 + Math.cos(i / 2) * 5 + Math.random() * 5),
+      timestamps: Array.from({ length: 24 }, (_, i) => {
+        const date = new Date();
+        date.setHours(date.getHours() - i);
+        return date.toISOString();
+      }).reverse()
+    };
+  }
+
+  /**
+   * 模拟警报配置
+   */
+  static getMockAlertConfigurations() {
+    return [
+      {
+        id: '1',
+        metric: 'cpu',
+        threshold: 80,
+        operator: 'greater_than',
+        enabled: true,
+        message: 'CPU usage is high',
+        severity: 'warning'
+      },
+      {
+        id: '2',
+        metric: 'memory',
+        threshold: 90,
+        operator: 'greater_than',
+        enabled: true,
+        message: 'Memory usage is critical',
+        severity: 'critical'
+      },
+      {
+        id: '3',
+        metric: 'disk',
+        threshold: 95,
+        operator: 'greater_than',
+        enabled: true,
+        message: 'Disk space is low',
+        severity: 'warning'
+      }
+    ];
+  }
+
+  /**
+   * 模拟活动警报
+   */
+  static getMockActiveAlerts() {
+    return [
+      {
+        id: 'alert-1',
+        metric: 'cpu',
+        value: 85.2,
+        threshold: 80,
+        message: 'CPU usage is high',
+        severity: 'warning',
+        timestamp: new Date().toISOString(),
+        acknowledged: false
+      }
+    ];
+  }
+
+  /**
+   * 模拟网络诊断数据
+   */
+  static getMockNetworkDiagnostics() {
+    return {
+      ping: {
+        host: 'google.com',
+        packets_sent: 4,
+        packets_received: 4,
+        packet_loss: 0,
+        min_time: 15.2,
+        max_time: 18.5,
+        avg_time: 16.8
+      },
+      traceroute: [
+        { hop: 1, ip: '192.168.1.1', hostname: 'gateway.local', time: 2.1 },
+        { hop: 2, ip: '10.0.0.1', hostname: 'isp-gateway.local', time: 15.3 },
+        { hop: 3, ip: '203.0.113.1', hostname: 'core-router.local', time: 16.8 }
+      ],
+      interfaces: [
+        {
+          name: 'Ethernet',
+          description: 'Intel Ethernet Connection',
+          ip_address: '192.168.1.100',
+          mac_address: '00:11:22:33:44:55',
+          is_up: true,
+          speed: 1000,
+          mtu: 1500,
+          bytes_sent: 104857600,
+          bytes_recv: 524288000,
+          packets_sent: 100000,
+          packets_recv: 200000
+        }
+      ]
+    };
+  }
+
+  /**
+   * 模拟进程详细信息
+   */
+  static getMockProcessDetails() {
+    return {
+      pid: '1234',
+      name: 'chrome.exe',
+      cpu_usage: '15.2',
+      memory_usage: '1048576',
+      memory_percent: '5.2',
+      cmd: 'C:\\Program Files\\Chrome\\chrome.exe --profile-directory=Default',
+      exe: 'C:\\Program Files\\Chrome\\chrome.exe',
+      cwd: 'C:\\Users\\TestUser',
+      user: 'TestUser',
+      start_time: new Date(Date.now() - 3600000).toISOString(),
+      threads: 12,
+      handles: 245,
+      parent_pid: '5678',
+      status: 'running',
+      priority: 8
+    };
+  }
 }
 
 // 导出模拟的invoke函数供测试使用

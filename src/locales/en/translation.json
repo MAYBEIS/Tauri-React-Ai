@@ -1,6 +1,7 @@
 {
   "navigation": {
     "performance": "Performance",
+    "monitoring": "Enhanced Monitoring",
     "network": "Network",
     "audio": "Audio",
     "hotkeys": "Hotkeys",
@@ -159,5 +160,33 @@
     "keyboardShortcuts": "Keyboard Shortcuts",
     "reportIssue": "Report Issue",
     "resetToDefaults": "Reset to Defaults"
+  },
+  "monitoring": {
+    "title": "Enhanced System Monitoring",
+    "subtitle": "Real-time and historical system performance monitoring",
+    "realTime": "Real-time",
+    "historical": "Historical",
+    "processes": "Processes",
+    "network": "Network",
+    "alerts": "Alerts",
+    "system": "System",
+    "cpu": "CPU",
+    "memory": "Memory",
+    "disk": "Disk",
+    "network": "Network",
+    "alerts": "Alerts",
+    "processes": "Processes",
+    "health": "Health",
+    "uptime": "Uptime",
+    "systemInformation": "System Information",
+    "operatingSystem": "Operating System",
+    "processor": "Processor",
+    "graphics": "Graphics",
+    "normal": "Normal",
+    "moderate": "Moderate",
+    "active": "Active",
+    "connected": "Connected",
+    "running": "Running",
+    "stable": "Stable"
   }
 }

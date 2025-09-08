@@ -1,6 +1,7 @@
 {
   "navigation": {
     "performance": "性能监控",
+    "monitoring": "增强监控",
     "network": "网络监控",
     "audio": "音频管理",
     "hotkeys": "快捷键",
@@ -159,5 +160,33 @@
     "keyboardShortcuts": "键盘快捷键",
     "reportIssue": "报告问题",
     "resetToDefaults": "重置为默认值"
+  },
+  "monitoring": {
+    "title": "增强系统监控",
+    "subtitle": "实时和历史系统性能监控",
+    "realTime": "实时监控",
+    "historical": "历史数据",
+    "processes": "进程管理",
+    "network": "网络诊断",
+    "alerts": "警报系统",
+    "system": "系统概览",
+    "cpu": "CPU",
+    "memory": "内存",
+    "disk": "磁盘",
+    "network": "网络",
+    "alerts": "警报",
+    "processes": "进程",
+    "health": "健康状态",
+    "uptime": "运行时间",
+    "systemInformation": "系统信息",
+    "operatingSystem": "操作系统",
+    "processor": "处理器",
+    "graphics": "显卡",
+    "normal": "正常",
+    "moderate": "中等",
+    "active": "活动",
+    "connected": "已连接",
+    "running": "运行中",
+    "stable": "稳定"
   }
 }

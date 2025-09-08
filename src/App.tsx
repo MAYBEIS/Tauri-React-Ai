@@ -25,6 +25,7 @@ import {
   AlertTriangle,
   CheckCircle,
   Bug,
+  Activity,
 } from "lucide-react"
 import { useState, useEffect, ChangeEvent, useCallback, useRef, memo } from "react"
 import SystemMonitorAPI, {
@@ -38,6 +39,7 @@ import SystemMonitorAPI, {
   ProcessInfo
 } from "@/lib/api"
 import TestPage from "@/components/TestPage"
+import MonitoringApp from "@/components/MonitoringApp"
 import "./App.css"
 import { useTranslation } from 'react-i18next'
 
@@ -440,6 +442,7 @@ export default function App() {
 
   const navigationItems = [
     { id: "performance", label: t('navigation.performance'), icon: BarChart3 },
+    { id: "monitoring", label: t('navigation.monitoring'), icon: Activity },
     { id: "network", label: t('navigation.network'), icon: Wifi },
     { id: "audio", label: t('navigation.audio'), icon: Volume2 },
     { id: "hotkeys", label: t('navigation.hotkeys'), icon: Keyboard },
@@ -846,6 +849,9 @@ export default function App() {
               </div>
             </>
           )}
+
+          {/* Monitoring Page */}
+          {currentPage === "monitoring" && <MonitoringApp />}
 
           {/* Network Page */}
           {currentPage === "network" && (
@@ -2145,6 +2151,7 @@ export default function App() {
 
           {/* Placeholder for other pages */}
           {currentPage !== "performance" &&
+            currentPage !== "monitoring" &&
             currentPage !== "network" &&
             currentPage !== "audio" &&
             currentPage !== "hotkeys" &&
