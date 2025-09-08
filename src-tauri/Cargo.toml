@@ -26,6 +26,9 @@ sysinfo = "0.30"
 tokio = { version = "1.0", features = ["full"] }
 ping = "0.5"
 cpal = "0.15"
+sqlx = { version = "0.7", features = ["runtime-tokio-rustls", "sqlite", "chrono", "uuid"] }
+chrono = { version = "0.4", features = ["serde"] }
+uuid = { version = "1.0", features = ["v4", "serde"] }
 
 [dev-dependencies]
 tokio-test = "0.4"

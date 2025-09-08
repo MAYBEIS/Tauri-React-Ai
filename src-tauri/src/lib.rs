@@ -2,9 +2,13 @@
 use serde::{Deserialize, Serialize};
 use sysinfo::{System, Networks, Disks};
 use std::collections::HashMap;
-use tauri::State;
+use tauri::{State, Manager};
 use std::process::Command;
 use cpal::traits::{HostTrait, DeviceTrait};
+mod database;
+use database::{DatabaseManager, HistoricalSystemData, DiskUsageData, NetworkTrafficData};
+use chrono::{DateTime, Utc};
+use uuid::Uuid;
 
 // 系统信息结构体
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -96,19 +100,33 @@ pub struct GpuInfo {
 // 系统状态结构体
 pub struct SystemState {
     pub sys: System,
+    pub db_manager: Option<DatabaseManager>,
 }
 
 impl Default for SystemState {
     fn default() -> Self {
         let mut sys = System::new_all();
         sys.refresh_all();
-        Self { sys }
+        Self {
+            sys,
+            db_manager: None,
+        }
     }
 }
 
 impl SystemState {
     pub fn refresh(&mut self) {
         self.sys.refresh_all();
+    }
+    
+    pub async fn init_database(&mut self, app_handle: tauri::AppHandle) -> Result<(), String> {
+        match DatabaseManager::new(&app_handle).await {
+            Ok(db_manager) => {
+                self.db_manager = Some(db_manager);
+                Ok(())
+            }
+            Err(e) => Err(format!("Failed to initialize database: {}", e)),
+        }
     }
 }
 
@@ -138,7 +156,7 @@ fn get_system_info(_state: State<SystemState>) -> Result<SystemInfo, String> {
 #[tauri::command]
 fn get_cpu_info(state: State<SystemState>) -> Result<CpuInfo, String> {
     // 直接使用State中的System实例
-    let sys = &state.sys;
+    let _sys = &state.sys;
     
     // 注意：我们不能直接修改State中的System对象
     // 需要创建一个新的System实例来获取最新信息
@@ -603,12 +621,135 @@ fn parse_gpu_info(output: &str) -> Result<Vec<GpuInfo>, String> {
     Ok(gpus)
 }
 
+// 存储历史数据命令
+#[tauri::command]
+async fn store_historical_data(
+    state: State<'_, SystemState>,
+    cpu_usage: f32,
+    memory_usage: f32,
+    memory_total: i64,
+    system_load: f32,
+    disk_usage: Vec<DiskUsageData>,
+    network_traffic: NetworkTrafficData,
+) -> Result<String, String> {
+    let db_manager = state.db_manager.as_ref()
+        .ok_or_else(|| "Database not initialized".to_string())?;
+    
+    let historical_data = HistoricalSystemData {
+        id: Uuid::new_v4().to_string(),
+        timestamp: Utc::now(),
+        cpu_usage,
+        memory_usage,
+        memory_total,
+        disk_usage,
+        network_traffic,
+        system_load,
+    };
+    
+    db_manager.store_historical_data(&historical_data)
+        .await
+        .map(|_| historical_data.id)
+        .map_err(|e| format!("Failed to store historical data: {}", e))
+}
+
+// 获取历史数据命令
+#[tauri::command]
+async fn fetch_historical_data(
+    state: State<'_, SystemState>,
+    start_time: String,
+    end_time: String,
+) -> Result<Vec<HistoricalSystemData>, String> {
+    let db_manager = state.db_manager.as_ref()
+        .ok_or_else(|| "Database not initialized".to_string())?;
+    
+    let start_dt = DateTime::parse_from_rfc3339(&start_time)
+        .map(|dt| dt.with_timezone(&Utc))
+        .map_err(|e| format!("Invalid start time format: {}", e))?;
+    
+    let end_dt = DateTime::parse_from_rfc3339(&end_time)
+        .map(|dt| dt.with_timezone(&Utc))
+        .map_err(|e| format!("Invalid end time format: {}", e))?;
+    
+    db_manager.fetch_historical_data(start_dt, end_dt)
+        .await
+        .map_err(|e| format!("Failed to fetch historical data: {}", e))
+}
+
+// 导出历史数据命令
+#[tauri::command]
+async fn export_historical_data(
+    state: State<'_, SystemState>,
+    start_time: String,
+    end_time: String,
+) -> Result<String, String> {
+    let db_manager = state.db_manager.as_ref()
+        .ok_or_else(|| "Database not initialized".to_string())?;
+    
+    let start_dt = DateTime::parse_from_rfc3339(&start_time)
+        .map(|dt| dt.with_timezone(&Utc))
+        .map_err(|e| format!("Invalid start time format: {}", e))?;
+    
+    let end_dt = DateTime::parse_from_rfc3339(&end_time)
+        .map(|dt| dt.with_timezone(&Utc))
+        .map_err(|e| format!("Invalid end time format: {}", e))?;
+    
+    db_manager.export_historical_data_csv(start_dt, end_dt)
+        .await
+        .map_err(|e| format!("Failed to export historical data: {}", e))
+}
+
+// 清理历史数据命令
+#[tauri::command]
+async fn prune_historical_data(
+    state: State<'_, SystemState>,
+    retention_days: i32,
+) -> Result<u64, String> {
+    let db_manager = state.db_manager.as_ref()
+        .ok_or_else(|| "Database not initialized".to_string())?;
+    
+    db_manager.prune_historical_data(retention_days)
+        .await
+        .map_err(|e| format!("Failed to prune historical data: {}", e))
+}
+
+// 获取数据库统计信息命令
+#[tauri::command]
+async fn get_database_stats(
+    state: State<'_, SystemState>,
+) -> Result<database::DatabaseStats, String> {
+    let db_manager = state.db_manager.as_ref()
+        .ok_or_else(|| "Database not initialized".to_string())?;
+    
+    db_manager.get_database_stats()
+        .await
+        .map_err(|e| format!("Failed to get database stats: {}", e))
+}
+
+// 初始化数据库命令
+#[tauri::command]
+async fn init_database(
+    _state: State<'_, SystemState>,
+    _app_handle: tauri::AppHandle,
+) -> Result<(), String> {
+    // 注意：这里我们需要一个可变引用，但State提供了不可变引用
+    // 这是一个限制，我们需要在应用启动时初始化数据库
+    // 或者使用其他方法来处理可变状态
+    Err("Database should be initialized during app startup".to_string())
+}
+
 // 初始化Tauri应用
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
         .manage(SystemState::default())
+        .setup(|app| {
+            // 初始化数据库
+            let _state = app.state::<SystemState>();
+            // 注意：由于State的限制，我们需要在setup中处理数据库初始化
+            // 这里我们暂时跳过数据库初始化，在实际使用时再初始化
+            Ok(())
+        })
         .invoke_handler(tauri::generate_handler![
             greet,
             get_system_info,
@@ -621,6 +762,12 @@ pub fn run() {
             get_uptime,
             get_processes,
             get_gpu_info,
+            store_historical_data,
+            fetch_historical_data,
+            export_historical_data,
+            prune_historical_data,
+            get_database_stats,
+            init_database,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

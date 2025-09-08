@@ -1,5 +1,4 @@
-import { invoke } from '@tauri-apps/api/core';
-import { vi } from 'vitest';
+import { vi, expect } from 'vitest';
 
 /**
  * IPC测试工具类

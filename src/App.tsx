@@ -27,7 +27,6 @@ import {
   Bug,
 } from "lucide-react"
 import { useState, useEffect, ChangeEvent, useCallback, useRef, memo } from "react"
-import reactLogo from "./assets/react.svg"
 import SystemMonitorAPI, {
   SystemInfo,
   CpuInfo,
@@ -112,7 +111,7 @@ function HotkeyCapture({ onCapture, currentHotkey }: { onCapture: (hotkey: strin
       setCapturedKeys(keys)
     }
 
-    const handleKeyUp = (e: KeyboardEvent) => {
+    const handleKeyUp = (_e: KeyboardEvent) => {
       if (capturedKeys.length > 1) {
         const hotkey = capturedKeys.join(" + ")
         onCapture(hotkey)
@@ -183,7 +182,7 @@ export default function App() {
   const [newHotkey, setNewHotkey] = useState("")
   const [editingHotkey, setEditingHotkey] = useState<number | null>(null)
 
-  const [networkSpeed, setNetworkSpeed] = useState({ download: 150, upload: 25 })
+  const [networkSpeed] = useState({ download: 150, upload: 25 })
   const [networkUsage, setNetworkUsage] = useState({ sent: 2.4, received: 15.8 })
 
   const [language, setLanguage] = useState("中文 (Chinese)")
