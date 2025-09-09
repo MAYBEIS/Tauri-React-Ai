@@ -9,8 +9,8 @@ import { IPCTestUtils } from '@/test/utils/ipc-test-utils';
 vi.mock('@/lib/api', () => ({
   default: {
     pingHost: vi.fn(),
-    traceroute: vi.fn(),
-    getNetworkInterfaces: vi.fn(),
+    diagnoseNetworkTraceroute: vi.fn(),
+    getNetworkConnections: vi.fn(),
     getNetworkStatus: vi.fn()
   }
 }));
@@ -69,8 +69,8 @@ describe('NetworkDiagnostics', () => {
     // 模拟 API 调用返回成功
     (SystemMonitorAPI.getNetworkStatus as any).mockResolvedValue(mockNetworkStatus);
     (SystemMonitorAPI.pingHost as any).mockResolvedValue(mockPingResult);
-    (SystemMonitorAPI.traceroute as any).mockResolvedValue(mockTracerouteResult);
-    (SystemMonitorAPI.getNetworkInterfaces as any).mockResolvedValue(mockNetworkInterfaces);
+    (SystemMonitorAPI.diagnoseNetworkTraceroute as any).mockResolvedValue(mockTracerouteResult);
+    (SystemMonitorAPI.getNetworkConnections as any).mockResolvedValue(mockNetworkInterfaces);
   });
 
   it('renders without crashing', async () => {
@@ -80,7 +80,7 @@ describe('NetworkDiagnostics', () => {
     expect(screen.getByText('Loading network data...')).toBeInTheDocument();
     
     // 等待数据加载完成
-    const title = await screen.findByText('monitoring.network');
+    const title = await screen.findByText('网络监控');
     expect(title).toBeInTheDocument();
   });
 
@@ -88,7 +88,7 @@ describe('NetworkDiagnostics', () => {
     render(<NetworkDiagnostics />);
     
     // 等待数据加载完成
-    await screen.findByText('monitoring.network');
+    await screen.findByText('网络监控');
     
     // 检查网络状态
     expect(screen.getByText('Connection Status')).toBeInTheDocument();
@@ -101,7 +101,7 @@ describe('NetworkDiagnostics', () => {
     render(<NetworkDiagnostics />);
     
     // 等待数据加载完成
-    await screen.findByText('monitoring.network');
+    await screen.findByText('网络监控');
     
     // 检查 Ping 工具部分
     expect(screen.getByText('Ping Tool')).toBeInTheDocument();
@@ -113,7 +113,7 @@ describe('NetworkDiagnostics', () => {
     render(<NetworkDiagnostics />);
     
     // 等待数据加载完成
-    await screen.findByText('monitoring.network');
+    await screen.findByText('网络监控');
     
     // 输入主机名
     const hostInput = screen.getByPlaceholderText('Enter host or IP address');
@@ -134,7 +134,7 @@ describe('NetworkDiagnostics', () => {
     render(<NetworkDiagnostics />);
     
     // 等待数据加载完成
-    await screen.findByText('monitoring.network');
+    await screen.findByText('网络监控');
     
     // 输入主机名
     const hostInput = screen.getByPlaceholderText('Enter host or IP address');
@@ -158,7 +158,7 @@ describe('NetworkDiagnostics', () => {
     render(<NetworkDiagnostics />);
     
     // 等待数据加载完成
-    await screen.findByText('monitoring.network');
+    await screen.findByText('网络监控');
     
     // 检查 Traceroute 工具部分
     expect(screen.getByText('Traceroute')).toBeInTheDocument();
@@ -170,7 +170,7 @@ describe('NetworkDiagnostics', () => {
     render(<NetworkDiagnostics />);
     
     // 等待数据加载完成
-    await screen.findByText('monitoring.network');
+    await screen.findByText('网络监控');
     
     // 输入主机名
     const hostInput = screen.getAllByPlaceholderText('Enter host or IP address')[1];
@@ -181,7 +181,7 @@ describe('NetworkDiagnostics', () => {
     fireEvent.click(traceButton);
     
     // 验证 traceroute 被调用
-    expect(SystemMonitorAPI.traceroute).toHaveBeenCalledWith('google.com');
+    expect(SystemMonitorAPI.diagnoseNetworkTraceroute).toHaveBeenCalledWith('google.com');
     
     // 等待结果显示
     await screen.findByText('Traceroute Results:');
@@ -191,7 +191,7 @@ describe('NetworkDiagnostics', () => {
     render(<NetworkDiagnostics />);
     
     // 等待数据加载完成
-    await screen.findByText('monitoring.network');
+    await screen.findByText('网络监控');
     
     // 输入主机名
     const hostInput = screen.getAllByPlaceholderText('Enter host or IP address')[1];
@@ -214,7 +214,7 @@ describe('NetworkDiagnostics', () => {
     render(<NetworkDiagnostics />);
     
     // 等待数据加载完成
-    await screen.findByText('monitoring.network');
+    await screen.findByText('网络监控');
     
     // 检查网络接口部分
     expect(screen.getByText('Network Interfaces')).toBeInTheDocument();
@@ -225,7 +225,7 @@ describe('NetworkDiagnostics', () => {
     render(<NetworkDiagnostics />);
     
     // 等待数据加载完成
-    await screen.findByText('monitoring.network');
+    await screen.findByText('网络监控');
     
     // 检查网络接口详情
     expect(screen.getByText('Ethernet')).toBeInTheDocument();
@@ -241,14 +241,14 @@ describe('NetworkDiagnostics', () => {
     render(<NetworkDiagnostics />);
     
     // 等待数据加载完成
-    await screen.findByText('monitoring.network');
+    await screen.findByText('网络监控');
     
     // 点击刷新接口按钮
     const refreshButton = screen.getByText('Refresh Interfaces');
     fireEvent.click(refreshButton);
     
     // 验证 getNetworkInterfaces 被再次调用
-    expect(SystemMonitorAPI.getNetworkInterfaces).toHaveBeenCalledTimes(2);
+    expect(SystemMonitorAPI.getNetworkConnections).toHaveBeenCalledTimes(2);
   });
 
   it('displays error message when ping fails', async () => {
@@ -258,7 +258,7 @@ describe('NetworkDiagnostics', () => {
     render(<NetworkDiagnostics />);
     
     // 等待数据加载完成
-    await screen.findByText('monitoring.network');
+    await screen.findByText('网络监控');
     
     // 输入主机名
     const hostInput = screen.getByPlaceholderText('Enter host or IP address');
@@ -275,12 +275,12 @@ describe('NetworkDiagnostics', () => {
 
   it('displays error message when traceroute fails', async () => {
     // 模拟 traceroute 失败
-    (SystemMonitorAPI.traceroute as any).mockRejectedValue(new Error('Network unreachable'));
+    (SystemMonitorAPI.diagnoseNetworkTraceroute as any).mockRejectedValue(new Error('Network unreachable'));
     
     render(<NetworkDiagnostics />);
     
     // 等待数据加载完成
-    await screen.findByText('monitoring.network');
+    await screen.findByText('网络监控');
     
     // 输入主机名
     const hostInput = screen.getAllByPlaceholderText('Enter host or IP address')[1];
@@ -297,12 +297,12 @@ describe('NetworkDiagnostics', () => {
 
   it('displays error message when network interfaces loading fails', async () => {
     // 模拟网络接口加载失败
-    (SystemMonitorAPI.getNetworkInterfaces as any).mockRejectedValue(new Error('Failed to get network interfaces'));
+    (SystemMonitorAPI.getNetworkConnections as any).mockRejectedValue(new Error('Failed to get network interfaces'));
     
     render(<NetworkDiagnostics />);
     
     // 等待数据加载完成
-    await screen.findByText('monitoring.network');
+    await screen.findByText('网络监控');
     
     // 等待错误消息显示
     const errorMessage = await screen.findByText('Failed to load network interfaces. Please try again.');

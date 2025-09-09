@@ -47,32 +47,32 @@ describe('MonitoringApp', () => {
 
   it('renders without crashing', () => {
     render(<MonitoringApp />);
-    expect(screen.getByText('monitoring.title')).toBeInTheDocument();
-    expect(screen.getByText('monitoring.subtitle')).toBeInTheDocument();
+    expect(screen.getByText('增强系统监控')).toBeInTheDocument();
+    expect(screen.getByText('实时和历史系统性能监控')).toBeInTheDocument();
   });
 
   it('displays quick stats cards', () => {
     render(<MonitoringApp />);
     
     // 检查快速统计卡片
-    expect(screen.getByText('monitoring.cpu')).toBeInTheDocument();
-    expect(screen.getByText('monitoring.memory')).toBeInTheDocument();
-    expect(screen.getByText('monitoring.disk')).toBeInTheDocument();
-    expect(screen.getByText('monitoring.network')).toBeInTheDocument();
-    expect(screen.getByText('monitoring.alerts')).toBeInTheDocument();
-    expect(screen.getByText('monitoring.processes')).toBeInTheDocument();
+    expect(screen.getByText('CPU')).toBeInTheDocument();
+    expect(screen.getByText('内存')).toBeInTheDocument();
+    expect(screen.getByText('磁盘')).toBeInTheDocument();
+    expect(screen.getByText('网络')).toBeInTheDocument();
+    expect(screen.getByText('警报')).toBeInTheDocument();
+    expect(screen.getByText('进程')).toBeInTheDocument();
   });
 
   it('renders tabs for different monitoring sections', () => {
     render(<MonitoringApp />);
     
     // 检查标签是否渲染
-    expect(screen.getByText('monitoring.realTime')).toBeInTheDocument();
-    expect(screen.getByText('monitoring.historical')).toBeInTheDocument();
-    expect(screen.getByText('monitoring.processes')).toBeInTheDocument();
-    expect(screen.getByText('monitoring.network')).toBeInTheDocument();
-    expect(screen.getByText('monitoring.alerts')).toBeInTheDocument();
-    expect(screen.getByText('monitoring.system')).toBeInTheDocument();
+    expect(screen.getByText('实时监控')).toBeInTheDocument();
+    expect(screen.getByText('历史数据')).toBeInTheDocument();
+    expect(screen.getByText('进程管理')).toBeInTheDocument();
+    expect(screen.getByText('网络诊断')).toBeInTheDocument();
+    expect(screen.getByText('警报系统')).toBeInTheDocument();
+    expect(screen.getByText('系统概览')).toBeInTheDocument();
   });
 
   it('displays the correct component for each tab', () => {
@@ -82,23 +82,23 @@ describe('MonitoringApp', () => {
     expect(screen.getByTestId('realtime-dashboard')).toBeInTheDocument();
     
     // 点击历史数据标签
-    fireEvent.click(screen.getByText('monitoring.historical'));
+    fireEvent.click(screen.getByText('历史数据'));
     expect(screen.getByTestId('historical-viewer')).toBeInTheDocument();
     
     // 点击进程管理标签
-    fireEvent.click(screen.getByText('monitoring.processes'));
+    fireEvent.click(screen.getByText('进程管理'));
     expect(screen.getByTestId('process-manager')).toBeInTheDocument();
     
     // 点击网络诊断标签
-    fireEvent.click(screen.getByText('monitoring.network'));
+    fireEvent.click(screen.getByText('网络诊断'));
     expect(screen.getByTestId('network-diagnostics')).toBeInTheDocument();
     
     // 点击警报系统标签
-    fireEvent.click(screen.getByText('monitoring.alerts'));
+    fireEvent.click(screen.getByText('警报系统'));
     expect(screen.getByTestId('alert-system')).toBeInTheDocument();
     
     // 点击系统概览标签
-    fireEvent.click(screen.getByText('monitoring.system'));
+    fireEvent.click(screen.getByText('系统概览'));
     expect(screen.queryByTestId('realtime-dashboard')).not.toBeInTheDocument();
     expect(screen.queryByTestId('historical-viewer')).not.toBeInTheDocument();
     expect(screen.queryByTestId('process-manager')).not.toBeInTheDocument();
@@ -113,12 +113,12 @@ describe('MonitoringApp', () => {
     fireEvent.click(screen.getByText('monitoring.system'));
     
     // 检查系统概览卡片
-    expect(screen.getByText('monitoring.cpu')).toBeInTheDocument();
-    expect(screen.getByText('monitoring.memory')).toBeInTheDocument();
-    expect(screen.getByText('monitoring.storage')).toBeInTheDocument();
-    expect(screen.getByText('monitoring.network')).toBeInTheDocument();
-    expect(screen.getByText('monitoring.health')).toBeInTheDocument();
-    expect(screen.getByText('monitoring.uptime')).toBeInTheDocument();
+    expect(screen.getByText('CPU')).toBeInTheDocument();
+    expect(screen.getByText('内存')).toBeInTheDocument();
+    expect(screen.getByText('存储')).toBeInTheDocument();
+    expect(screen.getByText('网络')).toBeInTheDocument();
+    expect(screen.getByText('健康状态')).toBeInTheDocument();
+    expect(screen.getByText('运行时间')).toBeInTheDocument();
   });
 
   it('displays system information in the system tab', () => {
@@ -128,9 +128,9 @@ describe('MonitoringApp', () => {
     fireEvent.click(screen.getByText('monitoring.system'));
     
     // 检查系统信息
-    expect(screen.getByText('monitoring.systemInformation')).toBeInTheDocument();
-    expect(screen.getByText('monitoring.operatingSystem')).toBeInTheDocument();
-    expect(screen.getByText('monitoring.processor')).toBeInTheDocument();
-    expect(screen.getByText('monitoring.graphics')).toBeInTheDocument();
+    expect(screen.getByText('系统信息')).toBeInTheDocument();
+    expect(screen.getByText('操作系统')).toBeInTheDocument();
+    expect(screen.getByText('处理器')).toBeInTheDocument();
+    expect(screen.getByText('显卡')).toBeInTheDocument();
   });
 });

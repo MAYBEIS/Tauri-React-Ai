@@ -6,6 +6,7 @@ import { useRealTimeMonitoring } from '@/hooks/useRealTimeMonitoring';
 
 // 模拟 useRealTimeMonitoring hook
 vi.mock('@/hooks/useRealTimeMonitoring', () => ({
+  __esModule: true,
   useRealTimeMonitoring: vi.fn()
 }));
 

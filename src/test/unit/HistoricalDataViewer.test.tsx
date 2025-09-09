@@ -8,7 +8,7 @@ import { IPCTestUtils } from '@/test/utils/ipc-test-utils';
 // 模拟 SystemMonitorAPI
 vi.mock('@/lib/api', () => ({
   default: {
-    getHistoricalData: vi.fn(),
+    fetchHistoricalData: vi.fn(),
     exportHistoricalData: vi.fn(),
     pruneHistoricalData: vi.fn()
   }
@@ -31,7 +31,7 @@ describe('HistoricalDataViewer', () => {
     vi.clearAllMocks();
     
     // 模拟 API 调用返回成功
-    (SystemMonitorAPI.getHistoricalData as any).mockResolvedValue(mockHistoricalData);
+    (SystemMonitorAPI.fetchHistoricalData as any).mockResolvedValue(mockHistoricalData);
     (SystemMonitorAPI.exportHistoricalData as any).mockResolvedValue(true);
     (SystemMonitorAPI.pruneHistoricalData as any).mockResolvedValue(true);
   });
@@ -43,7 +43,7 @@ describe('HistoricalDataViewer', () => {
     expect(screen.getByText('Loading historical data...')).toBeInTheDocument();
     
     // 等待数据加载完成
-    const title = await screen.findByText('monitoring.historical');
+    const title = await screen.findByText('历史数据');
     expect(title).toBeInTheDocument();
   });
 
@@ -51,7 +51,7 @@ describe('HistoricalDataViewer', () => {
     render(<HistoricalDataViewer />);
     
     // 等待数据加载完成
-    await screen.findByText('monitoring.historical');
+    await screen.findByText('历史数据');
     
     // 检查时间范围选择器
     expect(screen.getByText('1h')).toBeInTheDocument();
@@ -64,7 +64,7 @@ describe('HistoricalDataViewer', () => {
     render(<HistoricalDataViewer />);
     
     // 等待数据加载完成
-    await screen.findByText('monitoring.historical');
+    await screen.findByText('历史数据');
     
     // 检查指标选择复选框
     expect(screen.getByText('CPU')).toBeInTheDocument();
@@ -77,13 +77,13 @@ describe('HistoricalDataViewer', () => {
     render(<HistoricalDataViewer />);
     
     // 等待数据加载完成
-    await screen.findByText('monitoring.historical');
+    await screen.findByText('历史数据');
     
     // 点击 7d 时间范围
     fireEvent.click(screen.getByText('7d'));
     
     // 验证 API 调用
-    expect(SystemMonitorAPI.getHistoricalData).toHaveBeenCalledWith({
+    expect(SystemMonitorAPI.fetchHistoricalData).toHaveBeenCalledWith({
       timeRange: '7d',
       metrics: ['cpu', 'memory', 'disk', 'network']
     });
@@ -93,7 +93,7 @@ describe('HistoricalDataViewer', () => {
     render(<HistoricalDataViewer />);
     
     // 等待数据加载完成
-    await screen.findByText('monitoring.historical');
+    await screen.findByText('历史数据');
     
     // 取消 Memory 和 Disk 选项
     const memoryCheckbox = screen.getByLabelText('Memory');
@@ -103,7 +103,7 @@ describe('HistoricalDataViewer', () => {
     fireEvent.click(diskCheckbox);
     
     // 验证 API 调用
-    expect(SystemMonitorAPI.getHistoricalData).toHaveBeenCalledWith({
+    expect(SystemMonitorAPI.fetchHistoricalData).toHaveBeenCalledWith({
       timeRange: '24h', // 默认时间范围
       metrics: ['cpu', 'network']
     });
@@ -113,7 +113,7 @@ describe('HistoricalDataViewer', () => {
     render(<HistoricalDataViewer />);
     
     // 等待数据加载完成
-    await screen.findByText('monitoring.historical');
+    await screen.findByText('历史数据');
     
     // 点击导出按钮
     const exportButton = screen.getByText('Export to CSV');
@@ -129,7 +129,7 @@ describe('HistoricalDataViewer', () => {
 
   it('displays error message when data loading fails', async () => {
     // 模拟 API 调用失败
-    (SystemMonitorAPI.getHistoricalData as any).mockRejectedValue(new Error('Failed to fetch data'));
+    (SystemMonitorAPI.fetchHistoricalData as any).mockRejectedValue(new Error('Failed to fetch data'));
     
     render(<HistoricalDataViewer />);
     
@@ -143,7 +143,7 @@ describe('HistoricalDataViewer', () => {
 
   it('retries data loading when retry button is clicked', async () => {
     // 第一次调用失败
-    (SystemMonitorAPI.getHistoricalData as any)
+    (SystemMonitorAPI.fetchHistoricalData as any)
       .mockRejectedValueOnce(new Error('Failed to fetch data'))
       .mockResolvedValueOnce(mockHistoricalData);
     
@@ -156,17 +156,17 @@ describe('HistoricalDataViewer', () => {
     fireEvent.click(screen.getByText('Retry'));
     
     // 验证 API 被再次调用
-    expect(SystemMonitorAPI.getHistoricalData).toHaveBeenCalledTimes(2);
+    expect(SystemMonitorAPI.fetchHistoricalData).toHaveBeenCalledTimes(2);
     
     // 等待数据加载完成
-    await screen.findByText('monitoring.historical');
+    await screen.findByText('历史数据');
   });
 
   it('displays charts with correct data', async () => {
     render(<HistoricalDataViewer />);
     
     // 等待数据加载完成
-    await screen.findByText('monitoring.historical');
+    await screen.findByText('历史数据');
     
     // 检查图表是否渲染
     // 注意：这里假设图表组件有特定的测试ID或类名
@@ -181,7 +181,7 @@ describe('HistoricalDataViewer', () => {
     render(<HistoricalDataViewer />);
     
     // 等待数据加载完成
-    await screen.findByText('monitoring.historical');
+    await screen.findByText('历史数据');
     
     // 点击 7d 时间范围
     fireEvent.click(screen.getByText('7d'));
@@ -196,7 +196,7 @@ describe('HistoricalDataViewer', () => {
     render(<HistoricalDataViewer />);
     
     // 等待数据加载完成
-    await screen.findByText('monitoring.historical');
+    await screen.findByText('历史数据');
     
     // 取消 Memory 和 Disk 选项
     const memoryCheckbox = screen.getByLabelText('Memory');

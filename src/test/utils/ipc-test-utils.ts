@@ -45,8 +45,18 @@ export class IPCTestUtils {
    * @param times 调用次数
    */
   static verifyIPCCommandCalled(command: string, times = 1) {
-    expect(this.mockInvoke).toHaveBeenCalledWith(command, expect.anything());
+    // 验证调用次数
     expect(this.mockInvoke).toHaveBeenCalledTimes(times);
+    
+    // 验证至少有一次调用是指定的命令
+    let found = false;
+    for (const call of this.mockInvoke.mock.calls) {
+      if (call[0] === command) {
+        found = true;
+        break;
+      }
+    }
+    expect(found).toBe(true);
   }
 
   /**

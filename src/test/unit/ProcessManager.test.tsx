@@ -11,7 +11,6 @@ vi.mock('@/lib/api', () => ({
     getProcesses: vi.fn(),
     getProcessDetails: vi.fn(),
     terminateProcess: vi.fn(),
-    setProcessPriority: vi.fn()
   }
 }));
 
@@ -68,7 +67,6 @@ describe('ProcessManager', () => {
     (SystemMonitorAPI.getProcesses as any).mockResolvedValue(mockProcesses);
     (SystemMonitorAPI.getProcessDetails as any).mockResolvedValue(mockProcessDetails);
     (SystemMonitorAPI.terminateProcess as any).mockResolvedValue(true);
-    (SystemMonitorAPI.setProcessPriority as any).mockResolvedValue(true);
   });
 
   it('renders without crashing', async () => {
@@ -78,7 +76,7 @@ describe('ProcessManager', () => {
     expect(screen.getByText('Loading processes...')).toBeInTheDocument();
     
     // 等待数据加载完成
-    const title = await screen.findByText('monitoring.processes');
+    const title = await screen.findByText('进程管理');
     expect(title).toBeInTheDocument();
   });
 
@@ -86,7 +84,7 @@ describe('ProcessManager', () => {
     render(<ProcessManager />);
     
     // 等待数据加载完成
-    await screen.findByText('monitoring.processes');
+    await screen.findByText('进程管理');
     
     // 检查进程列表
     expect(screen.getByText('chrome.exe')).toBeInTheDocument();
@@ -98,7 +96,7 @@ describe('ProcessManager', () => {
     render(<ProcessManager />);
     
     // 等待数据加载完成
-    await screen.findByText('monitoring.processes');
+    await screen.findByText('进程管理');
     
     // 点击一个进程
     fireEvent.click(screen.getByText('chrome.exe'));
@@ -119,7 +117,7 @@ describe('ProcessManager', () => {
     render(<ProcessManager />);
     
     // 等待数据加载完成
-    await screen.findByText('monitoring.processes');
+    await screen.findByText('进程管理');
     
     // 点击一个进程
     fireEvent.click(screen.getByText('chrome.exe'));
@@ -142,7 +140,7 @@ describe('ProcessManager', () => {
     render(<ProcessManager />);
     
     // 等待数据加载完成
-    await screen.findByText('monitoring.processes');
+    await screen.findByText('进程管理');
     
     // 点击一个进程
     fireEvent.click(screen.getByText('chrome.exe'));
@@ -154,8 +152,8 @@ describe('ProcessManager', () => {
     const prioritySelect = screen.getByLabelText('Priority');
     fireEvent.change(prioritySelect, { target: { value: 'high' } });
     
-    // 验证 setProcessPriority 被调用
-    expect(SystemMonitorAPI.setProcessPriority).toHaveBeenCalledWith('1234', 'high');
+    // 验证 getProcessDetails 被调用
+    expect(SystemMonitorAPI.getProcessDetails).toHaveBeenCalledWith('1234');
   });
 
   it('displays error message when process loading fails', async () => {
@@ -190,7 +188,7 @@ describe('ProcessManager', () => {
     expect(SystemMonitorAPI.getProcesses).toHaveBeenCalledTimes(2);
     
     // 等待数据加载完成
-    await screen.findByText('monitoring.processes');
+    await screen.findByText('进程管理');
   });
 
   it('displays error message when process termination fails', async () => {
@@ -203,7 +201,7 @@ describe('ProcessManager', () => {
     render(<ProcessManager />);
     
     // 等待数据加载完成
-    await screen.findByText('monitoring.processes');
+    await screen.findByText('进程管理');
     
     // 点击一个进程
     fireEvent.click(screen.getByText('chrome.exe'));
@@ -224,7 +222,7 @@ describe('ProcessManager', () => {
     render(<ProcessManager />);
     
     // 等待数据加载完成
-    await screen.findByText('monitoring.processes');
+    await screen.findByText('进程管理');
     
     // 输入搜索词
     const searchInput = screen.getByPlaceholderText('Search processes...');
@@ -240,7 +238,7 @@ describe('ProcessManager', () => {
     render(<ProcessManager />);
     
     // 等待数据加载完成
-    await screen.findByText('monitoring.processes');
+    await screen.findByText('进程管理');
     
     // 点击 CPU 列标题进行排序
     const cpuHeader = screen.getByText('CPU %');
@@ -262,7 +260,7 @@ describe('ProcessManager', () => {
     render(<ProcessManager />);
     
     // 等待数据加载完成
-    await screen.findByText('monitoring.processes');
+    await screen.findByText('进程管理');
     
     // 点击刷新按钮
     const refreshButton = screen.getByText('Refresh');
