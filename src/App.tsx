@@ -1,7 +1,8 @@
 "use client"
 
-import { useState } from "react"
-import { BrowserRouter as Router, Routes, Route, useLocation } from "react-router-dom"
+
+import { BrowserRouter as Router, Routes, Route, useLocation, useNavigate } from "react-router-dom"
+
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import {
@@ -32,7 +33,7 @@ import TestPage from "@/components/TestPage"
 const Sidebar = () => {
   const { t } = useTranslation();
   const location = useLocation();
-  const [currentPage, setCurrentPage] = useState(location.pathname);
+  const navigate = useNavigate();
 
   const navigationItems = [
     { id: "/", label: t('navigation.performance'), icon: BarChart3 },
@@ -46,8 +47,7 @@ const Sidebar = () => {
   ]
 
   const handleNavigation = (path: string) => {
-    setCurrentPage(path);
-    window.history.pushState({}, '', path);
+    navigate(path);
   }
 
   return (
@@ -64,7 +64,7 @@ const Sidebar = () => {
       <nav className="space-y-2">
         {navigationItems.map((item) => {
           const Icon = item.icon
-          const isActive = currentPage === item.id
+          const isActive = location.pathname === item.id
           return (
             <div
               key={item.id}
